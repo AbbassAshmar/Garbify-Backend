@@ -31,5 +31,8 @@ class OrderDetail extends Model
         return $this->belongsTo(Size::class);
     }
 
+    //ACCESSORS
+
+    
 }
 

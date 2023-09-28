@@ -135,23 +135,26 @@ class ProductController extends Controller{
         return $products;
     }
 
-    public static function sortProducts($products, $sort_by){
+    public static function sortCollection($collection, $sort_by){
         if (!$sort_by) {
             try{
                 $sort_by = "name-ASC";
             }
             catch (Exception $e){
-                return $products;
+                return $collection;
             }
         }
+
         try{
-           
             [$by, $direction] = explode('-',$sort_by);
-            $products = $products->orderBy($by, $direction);
-            return $products;
+            $collection->orderBy($by, $direction);
+            // check if excuting throws an exception (for sorting with nonexistent columns)
+            $temp = $collection->get();
+            return $collection;
         }
-        catch (Exception $exc){
-            return $products;
+        catch(Exception $asc){
+            $collection->reorder('id',"ASC");
+            return $collection;
         }
     }
 
@@ -165,13 +168,12 @@ class ProductController extends Controller{
         return $this->total_count;
     }
     
-    // limit number of products according to pagination
-    public static function filterNumber($products, $page, $limit=50){
-
-        // if (!$page) return $products;
+    // limit count of collection according to pagination
+    public static function filterNumber($collection, $page, $limit=50){
         if (!$page) $page = 1;
-        $products = $products->skip(($page-1) * $limit)->take($limit);
-        return $products;
+        if (!$limit) $limit = 50;
+        $collection = $collection->skip(($page-1) * $limit)->take($limit);
+        return $collection;
     }
 
     private function filterSales($products,$sales){
@@ -191,14 +193,14 @@ class ProductController extends Controller{
         return $products;
     }
     private function filterProducts($products,array $filters){
-        
         $products = $this->priceBetween($products,$filters['price']);
         $products = $this->filterColor($products, $filters['color']);
         $products = $this->filterSize($products,$filters['size']);
         $products = $this->filterCategories($products, $filters['categories']);
-        $products = $this->sortProducts($products, $filters['sort_by']);
+        $products = $this->sortCollection($products, $filters['sort_by']);
+        // set $products total count before pagination
         $this->setTotalCount($products->count());
-        $products = $this->filterNumber($products, $filters['page']);
+        $products = $this->filterNumber($products, $filters['page'],$filters['limit']);
         $products = $this->filterSales($products, $filters['sales']);
         $products = $this->filterNewArrivals($products, $filters['new_arrivals']);
         return $products;
@@ -212,9 +214,10 @@ class ProductController extends Controller{
         $categories= $request->input("categories") ?$request->input("categories"):[];
         $sort_by = $request->input("sort-by");
         $page = $request->input("page"); 
+        $limit = $request->input("limit");
         $sales = $request->input("sales");
         $new_arrivals = $request->input("new-arrivals");
-
+        
         $products=  Product::with(["colors", "sizes","category", "sales","images"]);
         $filters = [
             'sales'=>$sales,
@@ -225,6 +228,7 @@ class ProductController extends Controller{
             'categories' =>$categories,
             'sort_by' =>$sort_by,
             'page' =>$page,
+            'limit'=>$limit
         ];
         $products = $this->filterProducts($products,$filters);
         $products = $products->get();
@@ -239,5 +243,15 @@ class ProductController extends Controller{
         return (new ProductFullResource($product))->response()->setStatusCode(200);
     }
 
+    public function productSize(Request $request , $id){
+        $product = Product::find($id);
+        if (!$product) return response(['error' => "product not found."],404);
+        return response(['sizes'=>$product->sizes_array],200);
+    }
 
+    public function productColor(Request $request ,$id){
+        $product = Product::find($id);
+        if (!$product) return response(['error' => "product not found."],404);
+        return response(['colors'=>$product->colors_array],200);
+    }
 }

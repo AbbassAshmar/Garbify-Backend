@@ -8,7 +8,7 @@ use Symfony\Component\Mime\Part\Multipart\AlternativePart;
 
 class Size extends Model
 {
-    protected $fillable = ['size'];
+    protected $fillable = ['size','unit'];
 
     use HasFactory;
 

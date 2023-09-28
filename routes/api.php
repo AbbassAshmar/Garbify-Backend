@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\FilterController;
 use App\Http\Controllers\NavbarController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\StripeController;
@@ -36,13 +37,14 @@ Route::group(["middleware"=>["auth:sanctum"]], function(){
     Route::post('/logout',[UserController::class, 'logout']);
 });
 
-
 // Products Controller Routes 
 
 Route::get("/products", [ProductController::class, "index"]);
 Route::get("/products/{id}", [ProductController::class, "show"]);
 Route::get("/filters",[FilterController::class, "show"]);
 Route::get("/categories", [NavbarController::class, "show"]);
+Route::get("/products/{id}/colors", [ProductController::class, "productColor"]);
+Route::get("/products/{id}/sizes",[ProductController::class, "productSize"]);
 
 // Stripe Controller Routes 
 
@@ -57,3 +59,7 @@ Route::get("/products/{product_id}/user/reviews/liked", [ReviewController::class
 Route::post("/reviews/{id}/like", [ReviewController::class , "likeReviewByProduct"])->middleware(['auth:sanctum']);
 Route::post("/reviews", [ReviewController::class , "createReview"])->middleware(['auth:sanctum']);
 
+
+// Order Controller Routes
+
+Route::get("/orders", [OrderController::class, "listOrders"])->middleware(['auth:sanctum']);

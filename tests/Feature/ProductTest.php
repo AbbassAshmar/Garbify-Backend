@@ -31,12 +31,13 @@ class ProductTest extends TestCase
         'created_at' => (new DateTime())->format('Y-m-d H:i:s')
         ]);
         $color = Color::create(['color'=>"red"]);
-        $size = Size::create(['size'=>"xl"]);
+        $size = Size::create(['size'=>"xl",'unit'=>"clothes"]);
         $sale = Sale::create(['quantity'=>100,'product_id' => $product->id, "sale_percentage"=>20.00 , "starts_at"=>"2022-1-2" , "ends_at"=>"2024-2-2"]);
         $product->colors()->attach([$color->id]);
         $product->sizes()->attach([$size->id]);
         self::$main_product = $product;
     }
+
     public function test_retrieve_product(): void
     {   
         $response = $this->getJson('/api/products/' . self::$main_product->id);
@@ -65,7 +66,6 @@ class ProductTest extends TestCase
                 ]
             ]
         );
-
     }
     public function test_retrieve_product_does_not_exist()
     {
