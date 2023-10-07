@@ -16,7 +16,7 @@ class TokenCheck
     public function handle(Request $request, Closure $next)
     {   
         if (!$request->bearerToken()){
-            return response()->json(["error"=>"Unauthorized"])->setStatusCode(401);
+            return response()->json(["error"=>"Unauthorized."])->setStatusCode(401);
         }
         return $next($request);
     }

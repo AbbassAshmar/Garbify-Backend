@@ -8,10 +8,13 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Laravel\Sanctum\PersonalAccessToken;
 use Tests\TestCase;
 
 class FavoritesListTest extends TestCase
 {
+    use RefreshDatabase;
+
     public $user_1;
     public $user_2;
     public $token_1;
@@ -27,6 +30,7 @@ class FavoritesListTest extends TestCase
 
         // create_users 
         $users =OrderTest::create_users();
+        User::create(['id'=>1,'name'=>"anonymous", 'email'=>"an@email.com",'password'=>"234"]);
         $this->user_1 = $users['users'][0];
         $this->user_2 = $users['users'][1];
         $this->token_1 = $users['tokens'][0];
@@ -41,7 +45,8 @@ class FavoritesListTest extends TestCase
         // create a FavoritesList for user_1
         $this->favorites_list_1 = FavoritesList::create([
             'user_id' => $this->user_1->id,
-            'name' => $this->user_1->name . "'s Favorites"
+            'name' => $this->user_1->name . "'s Favorites",
+            'views_count'=>0
         ]);
         Favorite::create([
             'favorites_list_id' => $this->favorites_list_1->id, 
@@ -62,9 +67,11 @@ class FavoritesListTest extends TestCase
     }
     
     public function test_like_favorites_list_again():void
-    {
-        $old_likes_count = $this->favorites_list_1->likes_count;
+    {   
         $headers = ['Authorization' => "Bearer ".$this->token_2];
+        $this->postJson('api/favorites_lists/'.$this->favorites_list_1->id.'/like',[],$headers);
+        $this->favorites_list_1->refresh();
+        $old_likes_count = $this->favorites_list_1->likes_count;
         $request = $this->postJson('api/favorites_lists/'.$this->favorites_list_1->id.'/like',[],$headers);
         $this->favorites_list_1->refresh();
         $request->assertOk();
@@ -87,17 +94,16 @@ class FavoritesListTest extends TestCase
         $request = $this->postJson('api/favorites_lists/'.$this->favorites_list_1->id.'/like',[],$headers);
         $this->favorites_list_1->refresh();
         $request->assertUnauthorized();
-        $request->assertJson(['message' => "unauthorized."]);
+        $request->assertJson(['message' => "Unauthenticated."]);
         $this->assertEquals($old_likes_count , $this->favorites_list_1->likes_count);
     }
-
 
     // viewFavoritesList method 
     public function test_view_favorites_list():void
     {
         $old_views_count = $this->favorites_list_1->views_count;
         $headers = ['Authorization' => "Bearer ".$this->token_2];
-        $request = $this->postJson('api/favorites_list/'.$this->favorites_list_1->id.'/view',[],$headers);
+        $request = $this->postJson('api/favorites_lists/'.$this->favorites_list_1->id.'/view',[],$headers);
         $this->favorites_list_1->refresh();
         $request->assertOk();
         $this->assertEquals($old_views_count+1, $this->favorites_list_1->views_count);
@@ -108,7 +114,7 @@ class FavoritesListTest extends TestCase
     {
         $old_views_count = $this->favorites_list_1->views_count;
         $headers = ['Authorization' => "Bearer ".$this->token_2];
-        $request = $this->postJson('api/favorites_list/'.$this->favorites_list_1->id.'/view',[],$headers);
+        $request = $this->postJson('api/favorites_lists/'.$this->favorites_list_1->id.'/view',[],$headers);
         $this->favorites_list_1->refresh();
         $request->assertOk();
         $this->assertEquals($old_views_count+1, $this->favorites_list_1->views_count);
@@ -119,7 +125,7 @@ class FavoritesListTest extends TestCase
     {
         $old_views_count = $this->favorites_list_1->views_count;
         $headers = [];
-        $request = $this->postJson('api/favorites_list/'.$this->favorites_list_1->id.'/view',[],$headers);
+        $request = $this->postJson('api/favorites_lists/'.$this->favorites_list_1->id.'/view',[],$headers);
         $this->favorites_list_1->refresh();
         $request->assertOk();
         $this->assertEquals($old_views_count+1, $this->favorites_list_1->views_count);
@@ -127,32 +133,35 @@ class FavoritesListTest extends TestCase
     }
 
     //admin and super-admin views don't count
-    public function test_view_favorites_list_by_admin_and_supper_admin():void
+    public function test_view_favorites_list_by_admin_and_super_admin():void
     {
         //create an admin account
-        $admin = User::create(["name"=>"admin","email"=>"admin@gmail.com", "password"=>"123321"]);
-        $token_admin = $admin->createToken("admin_token", ["admin"], Carbon::now()->addDay())->plainTextToken;
-
+        $admin = User::create(['id'=>5,"name"=>"admin","email"=>"admin@gmail.com", "password"=>"123321"]);
+        $token_admin = $admin->createToken("admin_token", ["admin"], Carbon::now()->addDays(1))->plainTextToken;
         //create super admin account
-        $super_admin = User::create(["name"=>"super_admin","email"=>"super_admin@gmail.com", "password"=>"123321"]);
-        $token_super_admin = $super_admin->createToken("super_admin_token", ["super-admin"], Carbon::now()->addDay())->plainTextToken;
+        $super_admin = User::create(['id'=>6,"name"=>"super_admin","email"=>"super_admin@gmail.com", "password"=>"123321"]);
+        $token_super_admin = $super_admin->createToken("super_admin_token", ["super-admin"], Carbon::now()->addDays(1))->plainTextToken;
+    
 
         //view by admin
         $headers = ["Authorization" => "Bearer " . $token_admin];
         $old_views_count = $this->favorites_list_1->views_count;
-        $admin_view = $this->postJson('api/favorites_list/'.$this->favorites_list_1->id.'/view',[],$headers);
+        
+        $admin_view = $this->postJson('api/favorites_lists/'.$this->favorites_list_1->id.'/view',[],$headers);
         $admin_view->assertOk();
         $this->favorites_list_1->refresh();
+
+        $admin_view->assertJson(["views_count"=>0 ,"action"=>"viewed"]);
         $this->assertEquals($old_views_count,$this->favorites_list_1->views_count);
-        $admin_view->assertJson(["views_count"=>$this->favorites_list_1->views_count ,"action"=>"viewed"]);
 
         //view by super-admin
         $headers = ["Authorization" => "Bearer " . $token_super_admin];
-        $super_admin_view = $this->postJson('api/favorites_list/'.$this->favorites_list_1->id.'/view',[],$headers);
+        $super_admin_view = $this->postJson('api/favorites_lists/'.$this->favorites_list_1->id.'/view',[],$headers);
         $super_admin_view->assertOk();
         $this->favorites_list_1->refresh();
+
+        $super_admin_view->assertJson(["views_count"=>0 ,"action"=>"viewed"]);
         $this->assertEquals($old_views_count,$this->favorites_list_1->views_count);
-        $super_admin_view->assertJson(["views_count"=>$this->favorites_list_1->views_count ,"action"=>"viewed"]);
     }
 
     // retrieveFavoritesList method 

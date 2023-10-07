@@ -53,17 +53,21 @@ class ReviewController extends Controller
     function likeReviewByProduct(Request $request, $id){
         $user = $request->user();
         $review = Review::find($id);
+
         if (!$review) return response(["error"=>"review not found."], 404);
 
-        $check_like_exists = $user->liked_reviews()->where("review_id",$id)->first();
-        if (!$check_like_exists){
-            $user->liked_reviews()->attach([$review->id]);
-            $review->update(['helpful_count'=>$review->helpful_count+1]);
-            return response(['helpful_count'=> $review->helpful_count, 'action'=>"added"],200);
+        $check_like_exists = $review->likes()->where("user_id", $user->id)->first();
+        if ($check_like_exists){
+            $review->likes()->detach($user->id); //remove the like
+            $new_likes_count = $review->likes()->count(); //get the new count
+            $review->update(['helpful_count'=>$new_likes_count]); //update the old count
+            return response(['helpful_count'=> $new_likes_count, 'action'=>"removed"],200);
         }
-        $user->liked_reviews()->detach($id);
-        $review->update(['helpful_count'=>$review->helpful_count-1]);
-        return response(['helpful_count'=> $review->helpful_count, 'action'=>"removed"],200);
+
+        $review->likes()->attach([$user->id]);
+        $new_likes_count = $review->likes()->count();
+        $review->update(['helpful_count'=>$new_likes_count]);
+        return response(['helpful_count'=> $new_likes_count, 'action'=>"added"],200);
     }
 
     // create a review 

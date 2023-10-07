@@ -24,12 +24,14 @@ class UserController extends Controller
         }
         return null;
     }
+
     static function validate_username($username){
         if ($username == null){
             return ['msg' =>'Please enter a username','error'=>"username"];
         }
         return null;
     }
+    
     static function validate_password($password, $confirm_password){
         if ($password == null ){
             return ['msg' => 'Please enter a password','error'=>"password"];
@@ -53,12 +55,12 @@ class UserController extends Controller
         return $user->createToken("user_token",$abilities,Carbon::now()->addDays(1));
     }
     
-    protected function check_token_expiry($token){
+    public static function check_token_expiry($token){
         if ($token->expires_at < Carbon::now()){
             // token expired
-            return false;
+            return true;
         }
-        return true; 
+        return false; 
     }
 
 

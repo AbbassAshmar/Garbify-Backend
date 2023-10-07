@@ -75,7 +75,7 @@ Route::post("/favorites", [FavoriteController::class, "createFavorite"])->middle
 
 // FavoritesList Controller Routes
 
-Route::get("/favorites_lists",[FavoritesListController::class, "listFavoirtesLists"]);
+Route::get("/favorites_lists",[FavoritesListController::class, "listFavoritesList"]);
 Route::get("/favorites_lists/{id}", [FavoritesListController::class, "retrieveFavoritesList"]);
-Route::post("/favorites_lists/{id}/like",[FavoritesListController::class, "likeFavoirtesLists"])->middleware(['auth:sanctum']);
-Route::post("/favorites_lists/{id}/view",[FavoritesListController::class, "viewFavoirtesLists"]);
+Route::post("/favorites_lists/{id}/like",[FavoritesListController::class, "likeFavoritesList"])->middleware(['auth:sanctum']);
+Route::post("/favorites_lists/{id}/view",[FavoritesListController::class, "viewFavoritesList"]);
