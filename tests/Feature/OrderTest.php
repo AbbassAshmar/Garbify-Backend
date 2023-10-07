@@ -33,17 +33,86 @@ class OrderTest extends TestCase
     private $token_2;
     private $order_3;
     private $order_5;
-    
+
+    public static function create_products(){
+        // create size
+        $size_1 = Size::create(['size' => 'M 3 / 4.5 W', 'unit'=>"american"]);
+
+        // create color
+        $color_1 = Color::create(['color'=>'red']);
+
+        //create category
+        $category_1 = Category::create([
+            'category' =>"men shoes",
+        ]);
+        // create products 
+        $product_1 = Product::create([
+            'name'=>'air force' ,
+            'quantity'=>322 , 
+            'category_id' => $category_1->id,
+            'price'=>100,
+            'description'=>'air force for men',
+            'type'=>'mens shoes',
+            'created_at' => Carbon::now()
+        ]);
+        $product_2 = Product::create([
+            'name'=>'Jordan 4' ,
+            'quantity'=>322 , 
+            'category_id' => $category_1->id,
+            'price'=>55,
+            'description'=>'Jordan 4 for men',
+            'type'=>'mens shoes',
+            'created_at' => Carbon::now()
+        ]);
+        $product_3 = Product::create([
+            'name'=>'air force 2' ,
+            'quantity'=>200, 
+            'category_id' => $category_1->id,
+            'price'=>55,
+            'description'=>'air force 2 for men',
+            'type'=>'mens shoes',
+            'created_at' => Carbon::now()
+        ]);
+
+        $product_1->colors()->attach([$color_1->id]);
+        $product_2->colors()->attach([$color_1->id]);
+        $product_3->colors()->attach([$color_1->id]);
+
+        $product_1->sizes()->attach([$size_1->id]);
+        $product_2->sizes()->attach([$size_1->id]);
+        $product_3->sizes()->attach([$size_1->id]);
+
+        return [$product_1, $product_2, $product_3];
+    }
+    public static function create_users(){
+        $user_1 = User::create(["email"=>"abc@gmail.com", "password"=>"abdc", "name"=>"abc"]);
+        $user_2 = User::create(["email"=>"abcd@gmail.com", "password"=>"abdc", "name"=>"abcd"]);
+        $token_1 = $user_1->createToken("user_token",['client'],Carbon::now()->addDays(1))->plainTextToken;
+        $token_2 = $user_2->createToken("user_token",['client'],Carbon::now()->addDays(1))->plainTextToken;
+
+        return [
+            'users' =>[
+                $user_1,
+                $user_2
+            ],
+            'tokens' =>[
+                $token_1,
+                $token_2,
+            ]
+        ];
+    }
     // runs before each test
     public function setUp():void
     {
         parent::setUp();
 
         // create users and a token for the first user
-        $this->user = User::create(["email"=>"abc@gmail.com", "password"=>"abdc", "name"=>"abc"]);
-        $this->user_2 =  User::create(["email"=>"abcd@gmail.com", "password"=>"abdc", "name"=>"abcd"]);
-        $this->token = $this->user->createToken("user_token",['client'],Carbon::now()->addDays(1))->plainTextToken;
-        $this->token_2 = $this->user_2->createToken("user_token",['client'],Carbon::now()->addDays(1))->plainTextToken;
+        $users_tokens = self::create_users();
+        $this->user = $users_tokens['users'][0];
+        $this->user_2 = $users_tokens['users'][1];
+        $this->token = $users_tokens['tokens'][0];
+        $this->token_2 = $users_tokens['tokens'][1];
+        
         // create shipping method 
         $shipping_method = ShippingMethod::create([
             'name' => '15$ shipping',
@@ -89,38 +158,12 @@ class OrderTest extends TestCase
             'category' =>"men shoes",
         ]);
         // create products 
-        $product_1 = Product::create([
-            'name'=>'air force' ,
-            'quantity'=>322 , 
-            'category_id' => $category_1->id,
-            'price'=>100,
-            'description'=>'air force for men',
-            'type'=>'mens shoes',
-            'created_at' => Carbon::now()
-        ]);
-        $product_2 = Product::create([
-            'name'=>'Jordan 4' ,
-            'quantity'=>322 , 
-            'category_id' => $category_1->id,
-            'price'=>55,
-            'description'=>'Jordan 4 for men',
-            'type'=>'mens shoes',
-            'created_at' => Carbon::now()
-        ]);
-        $product_3 = Product::create([
-            'name'=>'air force 2' ,
-            'quantity'=>200, 
-            'category_id' => $category_1->id,
-            'price'=>55,
-            'description'=>'air force 2 for men',
-            'type'=>'mens shoes',
-            'created_at' => Carbon::now()
-        ]);
-        $product_1->colors()->attach([$color_1->id]);
-        $product_2->colors()->attach([$color_1->id]);
-        $product_1->sizes()->attach([$size_1->id]);
-        $product_2->sizes()->attach([$size_1->id]);
+        $products = self::create_products();
+        $product_1 = $products[0];
+        $product_2 = $products[1];
+        $product_3 = $products[2];
         $this->product = $product_1;
+
         // create orders   
         //user not canceled order      
         $order_1 = Order::create(["status"=>"paid",
@@ -294,48 +337,6 @@ class OrderTest extends TestCase
     }
 
     // handle sort by 
-    // public function test_list_orders_sort_by_name_ASC()
-    // {
-    //     $request = $this->getJson("/api/orders?sort-by=name-ASC",[
-    //         "Authorization"=>"Bearer " . $this->token_2,
-    //     ]);
-    //     $request->assertOk();
-    //     $request->assertJson([
-    //         "count"=> 2,
-    //         "orders" =>[
-    //             [
-    //                 "id"=>$this->order_3->id,
-    //             ],
-    //             [
-    //                 'id'=>$this->order_5->id,
-    //             ],
-    //             [
-    //                 "id"=>$this->order_4->id,
-    //             ]
-    //         ]
-    //     ]);
-    // }
-    // public function test_list_orders_sort_by_name_DESC()
-    // {
-    //     $request = $this->getJson("/api/orders?sort-by=name-DESC",[
-    //         "Authorization"=>"Bearer " . $this->token_2,
-    //     ]);
-    //     $request->assertOk();
-    //     $request->assertJson([
-    //         "count"=> 2,
-    //         "orders" =>[
-    //             [
-    //                 "id"=>$this->order_4->id,
-    //             ],
-    //             [
-    //                 'id'=>$this->order_5->id,
-    //             ],
-    //             [
-    //                 "id"=>$this->order_3->id,
-    //             ]
-    //         ]
-    //     ]);
-    // }
     public function test_list_orders_sort_by_total_cost_DESC()
     {
         $request = $this->getJson("/api/orders?sort-by=total_cost-DESC",[

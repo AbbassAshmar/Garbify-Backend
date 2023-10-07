@@ -55,15 +55,15 @@ class ReviewController extends Controller
         $review = Review::find($id);
         if (!$review) return response(["error"=>"review not found."], 404);
 
-        $check_like_exists = $user->liked_reviews()->find($id);
+        $check_like_exists = $user->liked_reviews()->where("review_id",$id)->first();
         if (!$check_like_exists){
             $user->liked_reviews()->attach([$review->id]);
             $review->update(['helpful_count'=>$review->helpful_count+1]);
-            return response(['helpful_count'=> $review->helpful_count, 'action'=>"like added"]);
+            return response(['helpful_count'=> $review->helpful_count, 'action'=>"added"],200);
         }
         $user->liked_reviews()->detach($id);
         $review->update(['helpful_count'=>$review->helpful_count-1]);
-        return response(['helpful_count'=> $review->helpful_count, 'action'=>"like removed"]);
+        return response(['helpful_count'=> $review->helpful_count, 'action'=>"removed"],200);
     }
 
     // create a review 

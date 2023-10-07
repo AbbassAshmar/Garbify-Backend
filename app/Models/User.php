@@ -62,6 +62,18 @@ class User extends Authenticatable
         return $this->hasMany(ShippingAddress::class);
     }
 
+    public function favoritesLists(){
+        return $this->hasMany(FavoritesList::class);
+    }
+
+    public function viewedFavoritesLists(){
+        return $this->belongsToMany(User::class, "favorites_list_views","user_id","favorites_list_id");
+    }
+
+    public function likedFavoritesLists(){
+        return $this->belongsToMany(User::class, "favorites_list_likes","user_id","favorites_list_id");
+    }
+
     public function setPasswordAttribute($password){
         $this->attributes['password'] = Hash::make($password);
     }

@@ -47,6 +47,10 @@ class Product extends Model
         return $this->hasMany(OrderDetails::class);
     }
 
+    public function favorites(){
+        return $this->hasMany(favorites::class);
+    }
+
     public function getThumbnailAttribute(){
         return $this->images()->where("is_thumbnail",true)->first();
     }

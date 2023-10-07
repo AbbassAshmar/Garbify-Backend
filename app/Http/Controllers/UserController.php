@@ -149,7 +149,6 @@ class UserController extends Controller
 
 
     public function logout(Request $request){
-
         $token_plain_text = $request->bearerToken();
         try{
             $token =PersonalAccessToken::findToken($token_plain_text);

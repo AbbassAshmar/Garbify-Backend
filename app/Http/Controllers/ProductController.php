@@ -14,7 +14,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Database\QueryException;
 // get() returns a collection with conditions (where() orderBy()..) : returns QuerySet
 // first() returns the first instance                               : returns Object 
-// find() finds based on pk , find(1) similar to first()            : returns Object
+// find() finds based on id , find(1) similar to first()            : returns Object
 // all() returns a collection without conditions                    : returns QuerySet
 
 // others return object builders (can't be used without using get() after)
@@ -114,10 +114,8 @@ class ProductController extends Controller{
 
     private function filterCategories($products, array $categories=[]){
         //returns all prodcuts starting from the last element in categories[] till the end of the tree
-
         if (count($categories)<= 0) return $products;
     
-
         // get the children of every category in $categories
         $categories_array = $this->getSingleCategoryChildren($this->getChildByParents($categories));
         $ids_array = [];
@@ -192,6 +190,7 @@ class ProductController extends Controller{
         }
         return $products;
     }
+
     private function filterProducts($products,array $filters){
         $products = $this->priceBetween($products,$filters['price']);
         $products = $this->filterColor($products, $filters['color']);
@@ -235,11 +234,11 @@ class ProductController extends Controller{
         return (new ProductCollection(ProductResource::collection($products)))->setTotalCount($this->getTotalCount())->response()->setStatusCode(200);
     }
 
-    public function show(Request $request , $pk){
-        $product = Product::find($pk);
-        if (!$product){
-            return response(["error" => "Product Not Found."], 404);
-        }
+    public function retrieveProduct(Request $request , $id){
+        $product = Product::find($id);
+        if (!$product)
+        return response(["error" => "Product Not Found."], 404);
+    
         return (new ProductFullResource($product))->response()->setStatusCode(200);
     }
 

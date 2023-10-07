@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\FavoriteController;
+use App\Http\Controllers\FavoritesListController;
 use App\Http\Controllers\FilterController;
 use App\Http\Controllers\NavbarController;
 use App\Http\Controllers\OrderController;
@@ -9,6 +11,9 @@ use App\Http\Controllers\StripeController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
+use App\Models\Favorite;
+use App\Models\FavoritesList;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -40,7 +45,7 @@ Route::group(["middleware"=>["auth:sanctum"]], function(){
 // Products Controller Routes 
 
 Route::get("/products", [ProductController::class, "index"]);
-Route::get("/products/{id}", [ProductController::class, "show"]);
+Route::get("/products/{id}", [ProductController::class, "retrieveProduct"]);
 Route::get("/filters",[FilterController::class, "show"]);
 Route::get("/categories", [NavbarController::class, "show"]);
 Route::get("/products/{id}/colors", [ProductController::class, "productColor"]);
@@ -63,3 +68,14 @@ Route::post("/reviews", [ReviewController::class , "createReview"])->middleware(
 // Order Controller Routes
 
 Route::get("/orders", [OrderController::class, "listOrders"])->middleware(['auth:sanctum']);
+
+// Favorite Controller Routes
+
+Route::post("/favorites", [FavoriteController::class, "createFavorite"])->middleware(['auth:sanctum']);
+
+// FavoritesList Controller Routes
+
+Route::get("/favorites_lists",[FavoritesListController::class, "listFavoirtesLists"]);
+Route::get("/favorites_lists/{id}", [FavoritesListController::class, "retrieveFavoritesList"]);
+Route::post("/favorites_lists/{id}/like",[FavoritesListController::class, "likeFavoirtesLists"])->middleware(['auth:sanctum']);
+Route::post("/favorites_lists/{id}/view",[FavoritesListController::class, "viewFavoirtesLists"]);

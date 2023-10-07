@@ -7,11 +7,10 @@ use App\Models\Order;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+
 // add to order_details , sales field to check sales at ordering time
 class OrderController extends Controller
 {
-
- 
     public function listOrders(Request $request){
         $page = $request->input("page");
         $limit = $request->input("limit");
