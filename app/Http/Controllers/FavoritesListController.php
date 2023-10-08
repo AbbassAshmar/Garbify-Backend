@@ -17,7 +17,39 @@ class FavoritesListController extends Controller
 
     // get all public FavoritesLists of all users
     public function listFavoritesList(Request $request){
+        $page = $request->input("page");
+        $limit = $request->input("limit");
+        $sort_by = $request->input("sort-by")?$request->input("sort-by"):"most_popular";
+        $search = $request->input('q');
 
+        $favorites_lists = FavoritesList::has("favorites");
+
+        
+        if ($sort_by=="most_popular") 
+            $sort_by = "views_count$5*likes_count-ASC";
+            
+        if ($search) {
+            $search = str_replace("-"," ", $search);
+            $favorites_lists = $favorites_lists->where("name","like","%$search%");
+        }
+        
+        $favorites_total_count = $favorites_lists->count();
+        // dd($favorites_lists);
+
+        $sorted_favorites_lists = ProductController::sortCollection($favorites_lists,$sort_by);
+        dd($sorted_favorites_lists->get());
+        $limited_sorted_favorites_lists = ProductController::filterNumber($sorted_favorites_lists, $page,$limit);
+        $result = $limited_sorted_favorites_lists->with("user")->get();
+        $favorites_lists_count_after_limit = $result->count();
+        dd("here");
+        $response_body = [
+            "favorites_lists" => $result,
+            "count"=>$favorites_lists_count_after_limit,
+            "total_count"=>$favorites_total_count
+        ];
+
+        dd($response_body);
+        return response($response_body, 200);
     }
     
 
@@ -63,7 +95,6 @@ class FavoritesListController extends Controller
         if ($token->tokenable && !(UserController::check_token_expiry($token))){
             return ['token' => $token , 'user' =>$token->tokenable];
         }
-
 
         return ['token'=>null,'user'=>User::find($this::ANONYMOUS_USER_ID)];
     }

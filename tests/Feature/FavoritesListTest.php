@@ -23,7 +23,9 @@ class FavoritesListTest extends TestCase
     public $product_2;
     public $product_3;
     public $favorites_list_1;
-
+    public $favorites_list_2;
+    public $favorites_list_3;
+    public $favorites_list_4;
     public function setUp():void
     {
         parent::setUp();
@@ -33,8 +35,11 @@ class FavoritesListTest extends TestCase
         User::create(['id'=>1,'name'=>"anonymous", 'email'=>"an@email.com",'password'=>"234"]);
         $this->user_1 = $users['users'][0];
         $this->user_2 = $users['users'][1];
+        $user_3 = $users["users"][2];
+
         $this->token_1 = $users['tokens'][0];
         $this->token_2 = $users['tokens'][1];
+        $token_3 = $users['tokens'][2];
 
         // create_products
         $products = OrderTest::create_products();
@@ -46,12 +51,51 @@ class FavoritesListTest extends TestCase
         $this->favorites_list_1 = FavoritesList::create([
             'user_id' => $this->user_1->id,
             'name' => $this->user_1->name . "'s Favorites",
-            'views_count'=>0
+            'views_count'=>0,
+            'likes_count'=>0
+            //ratio 0
         ]);
         Favorite::create([
             'favorites_list_id' => $this->favorites_list_1->id, 
             'product_id' => $this->product_1->id
         ]);
+
+        // create a FavoritesList for user_2
+        $this->favorites_list_2 =FavoritesList::create([
+            'user_id' => $this->user_2->id,
+            'name' => $this->user_2->name . "'s Favorites",
+            'views_count'=>3,
+            'likes_count'=>3
+            //ratio:-9
+        ]);
+        Favorite::create([
+            'favorites_list_id' =>$this->favorites_list_2->id, 
+            'product_id' => $this->product_2->id
+        ]);
+
+        //create a FavroitesList for user_3
+        $this->favorites_list_3=FavoritesList::create([
+            'user_id' => $user_3->id,
+            'name' => $user_3->name . "'s Favorites",
+            'views_count'=>6,
+            'likes_count'=>2
+            //ratio : -2
+
+        ]);
+        Favorite::create([
+            'favorites_list_id' =>$this->favorites_list_3->id, 
+            'product_id' => $this->product_3->id
+        ]);
+
+        //create a FavroitesList for user_4
+        $user_4 = User::create(['id'=>6,'name'=>"askf", 'email'=>"ansdf@email.com",'password'=>"234"]);
+        $this->favorites_list_4=FavoritesList::create([
+            'user_id' => $user_4->id,
+            'name' => $user_4->name. "'s Favorites",
+            'views_count'=>6,
+            'likes_count'=>2
+        ]);
+       
     }
     
     // likeFavoritesList method 
@@ -136,10 +180,10 @@ class FavoritesListTest extends TestCase
     public function test_view_favorites_list_by_admin_and_super_admin():void
     {
         //create an admin account
-        $admin = User::create(['id'=>5,"name"=>"admin","email"=>"admin@gmail.com", "password"=>"123321"]);
+        $admin = User::create(['id'=>8,"name"=>"admin","email"=>"admin@gmail.com", "password"=>"123321"]);
         $token_admin = $admin->createToken("admin_token", ["admin"], Carbon::now()->addDays(1))->plainTextToken;
         //create super admin account
-        $super_admin = User::create(['id'=>6,"name"=>"super_admin","email"=>"super_admin@gmail.com", "password"=>"123321"]);
+        $super_admin = User::create(['id'=>7,"name"=>"super_admin","email"=>"super_admin@gmail.com", "password"=>"123321"]);
         $token_super_admin = $super_admin->createToken("super_admin_token", ["super-admin"], Carbon::now()->addDays(1))->plainTextToken;
     
 
@@ -169,6 +213,120 @@ class FavoritesListTest extends TestCase
 
     // listFavoritesLists method 
 
+    //initially sorted by most_popular (ratio num_views/num_likes)
+    public function test_list_favorites_lists():void
+    {
+        $request = $this->getJson("api/favorites_lists");
+        $request->assertOk();
+        $request->assertJson([
+            "favorites_lists" =>[
+                [
+                    "id" =>$this->favorites_list_2->id,
+                ],
+                [
+                    'id' =>$this->favorites_list_3->id,
+                ],
+                [
+                    "id" =>$this->favorites_list_1->id
+                ]
+            ],
+            "count"=>3,
+            "total_count"=>3
+        ]);
+        $request->assertJsonMissing([
+            "id"=>$this->favorites_list_4->id
+        ]);
+    }
+
+    // public function test_list_favorites_lists_limited():void
+    // {
+    //     $request = $this->getJson("api/favorites_lists?page=1&limit=1");
+    //     $request->assertOk();
+    //     $request->assertJson([
+    //         "favorites_lists" =>[],
+    //         "count"=>1,
+    //         "total_count"=>3
+    //     ]);
+    //     $request->assertJsonMissing([
+    //         "id"=>$this->favorites_list_4->id
+    //     ]);
+    // }
+
+
+    // public function test_list_favorites_lists_sort_by_most_viewed():void
+    // {
+    //     $request= $this->getJson("api/favorites_lists?sort-by=views_count-DESC");
+    //     $request->assertOk();
+    //     $request->assertJson([
+    //         "favorites_lists"=>[
+    //             [
+    //                 'id' =>$this->favorites_list_3->id,
+    //             ],
+    //             [
+    //                 "id" =>$this->favorites_list_2->id,
+    //             ],
+    //             [
+    //                 "id" =>$this->favorites_list_1->id
+    //             ]
+    //         ],
+    //         "count"=>3,
+    //         "total_count"=>3
+    //     ]);
+    // }
+
+    // public function test_list_favorites_lists_sort_by_most_liked():void
+    // {
+    //     $request= $this->getJson("api/favorites_lists?sort-by=likes_count-DESC");
+    //     $request->assertOk();
+    //     $request->assertJson([
+    //         "favorites_lists"=>[
+    //             [
+    //                 'id' =>$this->favorites_list_2->id,
+    //             ],
+    //             [
+    //                 "id" =>$this->favorites_list_3->id,
+    //             ],
+    //             [
+    //                 "id" =>$this->favorites_list_1->id
+    //             ]
+    //         ],
+    //         "count"=>3,
+    //         "total_count"=>3
+    //     ]);
+    // }
+
+    // public function test_list_favorites_lists_search():void
+    // {
+    //     $request= $this->getJson("api/favorites_lists?q=abc");
+    //     $request->assertOk();
+    //     $request->assertJson([
+    //         "favorites_lists"=>[
+    //             [
+    //                 'id' =>$this->favorites_list_2->id,
+    //             ],
+    //             [
+    //                 "id" =>$this->favorites_list_1->id
+    //             ]
+    //         ],
+    //         "count"=>2,
+    //         "total_count"=>3
+    //     ]);
+    // }
+
+    // [
+    //     {
+    //         id:1,
+    //         name:"John's Favorites",
+    //         views_count:213,
+    //         likes_count:234,
+    //         thumbnail:"url",
+    //         user_id:{
+    //             id:1,
+    //             profile_picture:Hoody2,
+    //             name:"josh",
+    //         }
+    //     },
+    // ]
 
 
 

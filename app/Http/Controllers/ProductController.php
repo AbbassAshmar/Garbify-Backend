@@ -134,24 +134,27 @@ class ProductController extends Controller{
     }
 
     public static function sortCollection($collection, $sort_by){
+        // - : space 
+        // $ : - (minus sign)
+
         if (!$sort_by) {
             try{
-                $sort_by = "name-ASC";
+                $sort_by = "name ASC";
             }
             catch (Exception $e){
                 return $collection;
             }
         }
-
         try{
-            [$by, $direction] = explode('-',$sort_by);
-            $collection->orderBy($by, $direction);
+            $sort_by = "age";
+            $sort_by = str_replace("-"," ",$sort_by);
+            $collection->orderByRaw(str_replace("$",'-',$sort_by));
             // check if excuting throws an exception (for sorting with nonexistent columns)
-            $temp = $collection->get();
+            $collection->get();
             return $collection;
         }
         catch(Exception $asc){
-            $collection->reorder('id',"ASC");
+            $collection->getQuery()->orders=null;
             return $collection;
         }
     }

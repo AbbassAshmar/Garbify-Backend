@@ -86,18 +86,23 @@ class OrderTest extends TestCase
     }
     public static function create_users(){
         $user_1 = User::create(["id"=>2,"email"=>"abc@gmail.com", "password"=>"abdc", "name"=>"abc"]);
-        $user_2 = User::create(["id"=>3,"email"=>"abcd@gmail.com", "password"=>"abdc", "name"=>"abcd"]);
+        $user_2 = User::create(["id"=>3,"email"=>"User2@gmail.com", "password"=>"abdc", "name"=>"fjsabcdio"]);
+        $user_3 = User::create(["id"=>4,"email"=>"user_3@gmail.com", "password"=>"abdc", "name"=>"asiodfj"]);
+
         $token_1 = $user_1->createToken("user_token",['client'],Carbon::now()->addDays(1))->plainTextToken;
         $token_2 = $user_2->createToken("user_token",['client'],Carbon::now()->addDays(1))->plainTextToken;
+        $token_3 = $user_3->createToken("user_token",['client'],Carbon::now()->addDays(1))->plainTextToken;
 
         return [
             'users' =>[
                 $user_1,
-                $user_2
+                $user_2,
+                $user_3
             ],
             'tokens' =>[
                 $token_1,
                 $token_2,
+                $token_3
             ]
         ];
     }
