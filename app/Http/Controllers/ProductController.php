@@ -12,6 +12,8 @@ use DateTime;
 use Exception;
 use Illuminate\Support\Arr;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
+
 // get() returns a collection with conditions (where() orderBy()..) : returns QuerySet
 // first() returns the first instance                               : returns Object 
 // find() finds based on id , find(1) similar to first()            : returns Object
@@ -146,7 +148,6 @@ class ProductController extends Controller{
             }
         }
         try{
-            $sort_by = "age";
             $sort_by = str_replace("-"," ",$sort_by);
             $collection->orderByRaw(str_replace("$",'-',$sort_by));
             // check if excuting throws an exception (for sorting with nonexistent columns)
@@ -154,6 +155,7 @@ class ProductController extends Controller{
             return $collection;
         }
         catch(Exception $asc){
+            DB::rollBack();
             $collection->getQuery()->orders=null;
             return $collection;
         }

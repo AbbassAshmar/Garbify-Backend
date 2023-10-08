@@ -216,6 +216,7 @@ class FavoritesListTest extends TestCase
     //initially sorted by most_popular (ratio num_views/num_likes)
     public function test_list_favorites_lists():void
     {
+        $this->withoutExceptionHandling();
         $request = $this->getJson("api/favorites_lists");
         $request->assertOk();
         $request->assertJson([

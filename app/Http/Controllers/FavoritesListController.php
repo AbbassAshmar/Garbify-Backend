@@ -34,21 +34,18 @@ class FavoritesListController extends Controller
         }
         
         $favorites_total_count = $favorites_lists->count();
-        // dd($favorites_lists);
 
         $sorted_favorites_lists = ProductController::sortCollection($favorites_lists,$sort_by);
-        dd($sorted_favorites_lists->get());
         $limited_sorted_favorites_lists = ProductController::filterNumber($sorted_favorites_lists, $page,$limit);
         $result = $limited_sorted_favorites_lists->with("user")->get();
         $favorites_lists_count_after_limit = $result->count();
-        dd("here");
+
         $response_body = [
             "favorites_lists" => $result,
             "count"=>$favorites_lists_count_after_limit,
             "total_count"=>$favorites_total_count
         ];
-
-        dd($response_body);
+        
         return response($response_body, 200);
     }
     
