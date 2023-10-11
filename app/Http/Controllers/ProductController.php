@@ -241,9 +241,7 @@ class ProductController extends Controller{
 
     public function retrieveProduct(Request $request , $id){
         $product = Product::find($id);
-        if (!$product)
-        return response(["error" => "Product Not Found."], 404);
-    
+        if (!$product) return response(["error" => "Product Not Found."], 404);
         return (new ProductFullResource($product))->response()->setStatusCode(200);
     }
 

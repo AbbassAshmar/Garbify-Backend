@@ -26,6 +26,7 @@ class FavoritesListTest extends TestCase
     public $favorites_list_2;
     public $favorites_list_3;
     public $favorites_list_4;
+    public $favorite_1;
     public function setUp():void
     {
         parent::setUp();
@@ -53,9 +54,8 @@ class FavoritesListTest extends TestCase
             'name' => $this->user_1->name . "'s Favorites",
             'views_count'=>0,
             'likes_count'=>0
-            //ratio 0
         ]);
-        Favorite::create([
+        $this->favorite_1 = Favorite::create([
             'favorites_list_id' => $this->favorites_list_1->id, 
             'product_id' => $this->product_1->id
         ]);
@@ -210,13 +210,47 @@ class FavoritesListTest extends TestCase
 
     // retrieveFavoritesList method 
 
+    public function test_retrieve_favorites_list():void
+    {
+        $request = $this->getJson("api/favorites_lists/". $this->favorites_list_1->id);
+        $request->assertOk();
+        $request->assertJsonStructure([
+            "favorites_list"=>[
+                "id",
+                "name",
+                "created_at",
+                "views_count",
+                "likes_count",
+                'public', 
+                'user_id', 
+                "user",
+                'favorites' => []
+            ]
+        ]);
+        $request->assertJson([
+            'favorites_list' =>[
+                'favorites' => [
+                    0=>[
+                        "id" => $this->favorite_1->id
+                    ]
+                ]
+            ]
+        ]);
+    }
+
+    public function test_retrieve_favorites_list_not_founc():void
+    {
+        $request = $this->getJson("api/favorites_lists/"  . 324324);
+        $request->assertNotFound();
+        $request->assertJson(['message'=>"Favorites list not found."]);
+    }
 
     // listFavoritesLists method 
 
     //initially sorted by most_popular (ratio num_views/num_likes)
     public function test_list_favorites_lists():void
     {
-        $this->withoutExceptionHandling();
+        // $this->withoutExceptionHandling();
         $request = $this->getJson("api/favorites_lists");
         $request->assertOk();
         $request->assertJson([

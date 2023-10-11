@@ -50,8 +50,15 @@ class FavoritesListController extends Controller
     }
     
 
-    // get one FavoriteList by id
+    // get one FavoritesList by id
     public function retrieveFavoritesList(Request $request ,$id){
+        $favorite_list = FavoritesList::with(["user","favorites",'favorites.product'])->find($id);
+        if (!$favorite_list) return response(["message"=>"Favorites list not found."],404);
+        return response(['favorites_list'=>$favorite_list],200);
+    }
+
+    // get FavoritesList of user
+    public function retrieveUserFavoritesList(Request $request){
 
     }
 

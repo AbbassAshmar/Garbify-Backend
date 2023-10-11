@@ -9,7 +9,9 @@ use Illuminate\Database\Eloquent\Model;
 class Product extends Model
 {
     use HasFactory;
-
+    protected $appends =[
+        'thumbnail'
+    ];
     protected $fillable = ['category_id' , 'name', 'created_at', 'price', 'description', 'type', 'quantity'];
     // protected $with= ["category","colors","sizes"];
     // protected $appends=["colors_array",'sizes_array','price_after_sale'];
