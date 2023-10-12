@@ -72,10 +72,13 @@ Route::get("/orders", [OrderController::class, "listOrders"])->middleware(['auth
 // Favorite Controller Routes
 
 Route::post("/favorites", [FavoriteController::class, "createFavorite"])->middleware(['auth:sanctum']);
+Route::get("/users/user/favorites", [FavoriteController::class, "listByUser"])->middleware(["auth:sanctum"]);
+Route::get("/favorites_lists/{id}/favorites", [FavoriteController::class, "listByFavoritesList"]);
 
 // FavoritesList Controller Routes
 
 Route::get("/favorites_lists",[FavoritesListController::class, "listFavoritesList"]);
-Route::get("/favorites_lists/{id}", [FavoritesListController::class, "retrieveFavoritesList"]);
 Route::post("/favorites_lists/{id}/like",[FavoritesListController::class, "likeFavoritesList"])->middleware(['auth:sanctum']);
 Route::post("/favorites_lists/{id}/view",[FavoritesListController::class, "viewFavoritesList"]);
+Route::get('/users/user/favorites_lists',[FavoritesListController::class, "retrieveByUser"])->middleware(["auth:sanctum"]);
+Route::get("/favorites_lists/{id}", [FavoritesListController::class, "retrieveById"]);

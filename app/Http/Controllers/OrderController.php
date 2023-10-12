@@ -14,20 +14,21 @@ class OrderController extends Controller
     public function listOrders(Request $request){
         $page = $request->input("page");
         $limit = $request->input("limit");
-        $sort_by = $request->input("sort-by")?$request->input("sort-by"):"created_at-DESC";
+        $sort_by = $request->input("sort+by")?$request->input("sort+by"):"created_at+DESC";
         $search = $request->input("q");
 
         $user = $request->user();
         $orders = $user->orders()->where("canceled_at" , null);
 
-        // search if q is provided 
+        // search if q is provided ,search by product name
         if ($search){
-            $search = str_replace("-"," ", $search);
+            $search = str_replace("+"," ", $search);
             $orders = $orders->select("orders.*")
               ->join("order_details", "order_details.order_id", "=","orders.id")
               ->join("products", "order_details.product_id","=",'products.id')
               ->where("products.name" , 'like' ,"%$search%");
         }
+        
         $orders_total_count =$orders->count();
         $sorted_orders = ProductController::sortCollection($orders , $sort_by);
         $limited_sorted_orders = ProductController::filterNumber($sorted_orders,$page,$limit); 

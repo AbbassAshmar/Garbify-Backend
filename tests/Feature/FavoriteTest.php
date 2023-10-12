@@ -22,6 +22,11 @@ class FavoriteTest extends TestCase
     public $product_2;
     public $product_3;
 
+    public $favorites_list_1;
+    public $fav_1;
+    public $fav_2;
+    public $fav_3;
+
     public function setUp():void
     {
         parent::setUp();
@@ -40,7 +45,22 @@ class FavoriteTest extends TestCase
         $this->product_1 = $products[0];
         $this->product_2 = $products[1];
         $this->product_3 = $products[2];
+
+        //create_favorites
+        $this->favorites_list_1 = FavoritesList::create([
+            "name"=>$this->user_2->name . "'s favorites",
+            "user_id"=>$this->user_2->id,
+            'views_count'=>0,
+            'likes_count'=>0,
+            'public'=>true
+        ]);
+        $this->fav_1=Favorite::create(['product_id'=>$this->product_1->id,'favorites_list_id'=>$this->favorites_list_1->id]);
+        $this->fav_2=Favorite::create(['product_id'=>$this->product_2->id,'favorites_list_id'=>$this->favorites_list_1->id]);
+        $this->fav_3=Favorite::create(['product_id'=>$this->product_3->id,'favorites_list_id'=>$this->favorites_list_1->id]);
+
     }
+
+    //createFavorite method tests
 
     public function test_create_first_favorite(): void
     {
@@ -117,7 +137,7 @@ class FavoriteTest extends TestCase
             'user_id' => $this->user_1->id,
             'name' =>$this->user_1->name ."'s Favorites",
         ]);
-        $fav_1= Favorite::create([
+        Favorite::create([
             'favorites_list_id' =>$list->id,
             'product_id' =>$this->product_1->id,
         ]);
@@ -132,6 +152,58 @@ class FavoriteTest extends TestCase
         ]);
         $all_fav = $list->favorites()->count();
         $this->assertEquals(0, $all_fav);
+    }
+
+    //listByFavoritesList method tests
+
+    public function test_list_by_favorites_list():void
+    {
+        $request = $this->getJson("api/favorites_lists/".$this->favorites_list_1->id."/favorites");
+        $request->assertOk();
+        $request->assertJson([
+            "favorites" => [
+                ["id"=>$this->fav_1->id],
+                ["id"=>$this->fav_2->id],
+                ["id"=>$this->fav_3->id],
+            ],
+            "count" => 3,
+            "total_count"=>3
+        ]);
+    }
+
+    public function test_list_by_favorites_list_does_not_exist():void
+    {
+        $request = $this->getJson("api/favorites_lists/32424/favorites");
+        $request->assertBadRequest();
+        $request->assertJson(["message"=>"Favorites list does not exist."]);
+    }
+
+    public function test_list_by_favorites_list_limited():void
+    {
+        $request = $this->getJson("api/favorites_lists/".$this->favorites_list_1->id."/favorites?page=1&limit=2");
+        $request->assertOk();
+        $request->assertJson([
+            "favorites" => [
+                ["id"=>$this->fav_1->id],
+                ["id"=>$this->fav_2->id],
+            ],
+            "count" => 2,
+            "total_count"=>3
+        ]);
+    }
+
+    public function test_list_by_favorites_list_search():void
+    {
+        $request = $this->getJson("api/favorites_lists/".$this->favorites_list_1->id."/favorites?q=air+f");
+        $request->assertOk();
+        $request->assertJson([
+            "favorites" => [
+                ["id"=>$this->fav_1->id],
+                ["id"=>$this->fav_3->id],
+            ],
+            "count" => 2,
+            "total_count"=>2
+        ]);
     }
 
 }

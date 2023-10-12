@@ -42,4 +42,49 @@ class FavoriteController extends Controller
         ];
         return response($response, 201);
     }
+
+    // returns all favorites of a favorites list (used for displaying other users' favorites)
+    public function listByFavoritesList(Request $request, $id){
+        $page = $request->input("page");
+        $limit = $request->input("limit");
+        $sort_by = $request->input("sort+by");
+        $search = $request->input('q');
+
+        $favorites_list = FavoritesList::find($id);
+        if (!$favorites_list) return response(["message"=>"Favorites list does not exist."], 400);
+        
+        $favorites = Favorite::with(["product"])->where("favorites_list_id" , $id);
+
+        //search by products name
+        if ($search){
+            $favorites = $favorites->whereHas("product" , function ($query) use(&$search){
+                $query->where("name" , "like" ,"%$search%");
+            });
+        }
+
+        $total_count = $favorites->count();
+        $sorted_favorites = ProductController::sortCollection($favorites, $sort_by);
+        $sorted_limited_favorites = ProductController::filterNumber($sorted_favorites, $page, $limit);
+        $result= $sorted_limited_favorites->get();
+        $favorites_count_after_limit = $result->count();
+
+        $response = [
+            "favorites"=> $result,
+            "count"=> $favorites_count_after_limit,
+            "total_count"=> $total_count
+        ];
+
+        return response($response, 200);
+    }
+
+    //returns all favorites of a logged in user by token (used for displaying users' own favorites)
+    public function listByUser(Request $request){
+
+    }
+
+    //returns favorites 
+    public function retrievetById(Request $request){
+
+    }
 }
+

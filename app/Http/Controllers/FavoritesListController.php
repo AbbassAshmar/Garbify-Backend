@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\FavoritesListResource;
 use App\Models\Favorite;
 use App\Models\FavoritesList;
 use Illuminate\Http\Request;
@@ -19,17 +20,16 @@ class FavoritesListController extends Controller
     public function listFavoritesList(Request $request){
         $page = $request->input("page");
         $limit = $request->input("limit");
-        $sort_by = $request->input("sort-by")?$request->input("sort-by"):"most_popular";
+        $sort_by = $request->input("sort_by")?$request->input("sort_by"):"most popular";
         $search = $request->input('q');
 
         $favorites_lists = FavoritesList::has("favorites");
-
         
-        if ($sort_by=="most_popular") 
-            $sort_by = "views_count$5*likes_count-ASC";
+        if ($sort_by=="most popular") 
+            $sort_by = "views_count-5*likes_count+ASC";
             
         if ($search) {
-            $search = str_replace("-"," ", $search);
+            $search = str_replace("+"," ", $search);
             $favorites_lists = $favorites_lists->where("name","like","%$search%");
         }
         
@@ -49,17 +49,18 @@ class FavoritesListController extends Controller
         return response($response_body, 200);
     }
     
-
-    // get one FavoritesList by id
-    public function retrieveFavoritesList(Request $request ,$id){
-        $favorite_list = FavoritesList::with(["user","favorites",'favorites.product'])->find($id);
-        if (!$favorite_list) return response(["message"=>"Favorites list not found."],404);
-        return response(['favorites_list'=>$favorite_list],200);
+    // get favoritesList of a user by token 
+    public function retrieveByUser(Request $request){
+        $user = $request->user();
+        $favorites_list = FavoritesList::where("user_id" , $user->id)->first();
+        return response(["favorites_list" => $favorites_list], 200);
     }
 
-    // get FavoritesList of user
-    public function retrieveUserFavoritesList(Request $request){
-
+    // get one FavoritesList by id
+    public function retrieveById(Request $request ,$id){
+        $favorites_list = FavoritesList::with("user")->find($id);
+        if (!$favorites_list) return response(["message"=>"Favorites list not found."],404);
+        return response(['favorites_list'=>$favorites_list],200);
     }
 
     // like and like remove

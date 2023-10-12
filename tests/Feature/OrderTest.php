@@ -45,6 +45,7 @@ class OrderTest extends TestCase
         $category_1 = Category::create([
             'category' =>"men shoes",
         ]);
+        
         // create products 
         $product_1 = Product::create([
             'name'=>'air force' ,

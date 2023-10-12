@@ -136,20 +136,14 @@ class ProductController extends Controller{
     }
 
     public static function sortCollection($collection, $sort_by){
-        // - : space 
-        // $ : - (minus sign)
+        // + : space 
 
         if (!$sort_by) {
-            try{
-                $sort_by = "name ASC";
-            }
-            catch (Exception $e){
-                return $collection;
-            }
+            return $collection;
         }
         try{
-            $sort_by = str_replace("-"," ",$sort_by);
-            $collection->orderByRaw(str_replace("$",'-',$sort_by));
+            $sort_by = str_replace("+"," ",$sort_by);
+            $collection->orderByRaw($sort_by);
             // check if excuting throws an exception (for sorting with nonexistent columns)
             $collection->get();
             return $collection;

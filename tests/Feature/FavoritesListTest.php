@@ -208,9 +208,9 @@ class FavoritesListTest extends TestCase
         $this->assertEquals($old_views_count,$this->favorites_list_1->views_count);
     }
 
-    // retrieveFavoritesList method 
+    // retreiveById method 
 
-    public function test_retrieve_favorites_list():void
+    public function test_retrieve_favorites_list_by_id():void
     {
         $request = $this->getJson("api/favorites_lists/". $this->favorites_list_1->id);
         $request->assertOk();
@@ -224,25 +224,43 @@ class FavoritesListTest extends TestCase
                 'public', 
                 'user_id', 
                 "user",
-                'favorites' => []
-            ]
-        ]);
-        $request->assertJson([
-            'favorites_list' =>[
-                'favorites' => [
-                    0=>[
-                        "id" => $this->favorite_1->id
-                    ]
-                ]
             ]
         ]);
     }
 
-    public function test_retrieve_favorites_list_not_founc():void
+    public function test_retrieve_favorites_list_by_id_not_found():void
     {
         $request = $this->getJson("api/favorites_lists/"  . 324324);
         $request->assertNotFound();
         $request->assertJson(['message'=>"Favorites list not found."]);
+    }
+
+    // retrieveByUser method 
+
+    public function test_retrieve_favorites_list_by_user():void
+    {
+        $headers = ["Authorization" => "Bearer " .$this->token_1];
+        $request = $this->getJson("api/users/user/favorites_lists",$headers);
+        $request->assertOk();
+        $request->assertJsonStructure([
+            "favorites_list"=>[
+                "id",
+                'name',
+                'likes_count',
+                'views_count',
+                'public',
+                'created_at',
+                'user_id'
+            ]
+        ]);
+    }
+
+    public function test_retrieve_favorites_list_by_user_unauthenticated():void
+    {
+        $headers =[];
+        $request = $this->getJson("api/users/user/favorites_lists", $headers);
+        $request->assertUnauthorized();
+        $request->assertJson(["message"=>"Unauthenticated."]);
     }
 
     // listFavoritesLists method 
@@ -250,7 +268,6 @@ class FavoritesListTest extends TestCase
     //initially sorted by most_popular (ratio num_views/num_likes)
     public function test_list_favorites_lists():void
     {
-        // $this->withoutExceptionHandling();
         $request = $this->getJson("api/favorites_lists");
         $request->assertOk();
         $request->assertJson([
@@ -273,80 +290,79 @@ class FavoritesListTest extends TestCase
         ]);
     }
 
-    // public function test_list_favorites_lists_limited():void
-    // {
-    //     $request = $this->getJson("api/favorites_lists?page=1&limit=1");
-    //     $request->assertOk();
-    //     $request->assertJson([
-    //         "favorites_lists" =>[],
-    //         "count"=>1,
-    //         "total_count"=>3
-    //     ]);
-    //     $request->assertJsonMissing([
-    //         "id"=>$this->favorites_list_4->id
-    //     ]);
-    // }
+    public function test_list_favorites_lists_limited():void
+    {
+        $request = $this->getJson("api/favorites_lists?page=1&limit=1");
+        $request->assertOk();
+        $request->assertJson([
+            "favorites_lists" =>[],
+            "count"=>1,
+            "total_count"=>3
+        ]);
+        $request->assertJsonMissing([
+            "id"=>$this->favorites_list_4->id
+        ]);
+    }
 
+    public function test_list_favorites_lists_sort_by_most_viewed():void
+    {
+        $request= $this->getJson("api/favorites_lists?sort+by=views_count+DESC");
+        $request->assertOk();
+        $request->assertJson([
+            "favorites_lists"=>[
+                [
+                    'id' =>$this->favorites_list_3->id,
+                ],
+                [
+                    "id" =>$this->favorites_list_2->id,
+                ],
+                [
+                    "id" =>$this->favorites_list_1->id
+                ]
+            ],
+            "count"=>3,
+            "total_count"=>3
+        ]);
+    }
 
-    // public function test_list_favorites_lists_sort_by_most_viewed():void
-    // {
-    //     $request= $this->getJson("api/favorites_lists?sort-by=views_count-DESC");
-    //     $request->assertOk();
-    //     $request->assertJson([
-    //         "favorites_lists"=>[
-    //             [
-    //                 'id' =>$this->favorites_list_3->id,
-    //             ],
-    //             [
-    //                 "id" =>$this->favorites_list_2->id,
-    //             ],
-    //             [
-    //                 "id" =>$this->favorites_list_1->id
-    //             ]
-    //         ],
-    //         "count"=>3,
-    //         "total_count"=>3
-    //     ]);
-    // }
+    public function test_list_favorites_lists_sort_by_most_liked():void
+    {
+        $request= $this->getJson("api/favorites_lists?sort-by=likes_count-DESC");
+        $request->assertOk();
+        $request->assertJson([
+            "favorites_lists"=>[
+                [
+                    'id' =>$this->favorites_list_2->id,
+                ],
+                [
+                    "id" =>$this->favorites_list_3->id,
+                ],
+                [
+                    "id" =>$this->favorites_list_1->id
+                ]
+            ],
+            "count"=>3,
+            "total_count"=>3
+        ]);
+    }
 
-    // public function test_list_favorites_lists_sort_by_most_liked():void
-    // {
-    //     $request= $this->getJson("api/favorites_lists?sort-by=likes_count-DESC");
-    //     $request->assertOk();
-    //     $request->assertJson([
-    //         "favorites_lists"=>[
-    //             [
-    //                 'id' =>$this->favorites_list_2->id,
-    //             ],
-    //             [
-    //                 "id" =>$this->favorites_list_3->id,
-    //             ],
-    //             [
-    //                 "id" =>$this->favorites_list_1->id
-    //             ]
-    //         ],
-    //         "count"=>3,
-    //         "total_count"=>3
-    //     ]);
-    // }
-
-    // public function test_list_favorites_lists_search():void
-    // {
-    //     $request= $this->getJson("api/favorites_lists?q=abc");
-    //     $request->assertOk();
-    //     $request->assertJson([
-    //         "favorites_lists"=>[
-    //             [
-    //                 'id' =>$this->favorites_list_2->id,
-    //             ],
-    //             [
-    //                 "id" =>$this->favorites_list_1->id
-    //             ]
-    //         ],
-    //         "count"=>2,
-    //         "total_count"=>3
-    //     ]);
-    // }
+    public function test_list_favorites_lists_search():void
+    {
+        $request= $this->getJson("api/favorites_lists?q=abc");
+        $request->assertOk();
+        $request->assertJson([
+            "favorites_lists"=>[
+                [
+                    'id' =>$this->favorites_list_2->id,
+                ],
+                [
+                    "id" =>$this->favorites_list_1->id
+                ]
+            ],
+            "count"=>2, // count after pagination (limit)
+            "total_count"=>2 // total count in search result
+        ]);
+    }
 
     // [
     //     {
