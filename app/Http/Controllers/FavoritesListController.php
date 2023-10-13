@@ -23,7 +23,7 @@ class FavoritesListController extends Controller
         $sort_by = $request->input("sort_by")?$request->input("sort_by"):"most popular";
         $search = $request->input('q');
 
-        $favorites_lists = FavoritesList::has("favorites");
+        $favorites_lists = FavoritesList::has("favorites")->where("public", true);
         
         if ($sort_by=="most popular") 
             $sort_by = "views_count-5*likes_count+ASC";
@@ -32,20 +32,8 @@ class FavoritesListController extends Controller
             $search = str_replace("+"," ", $search);
             $favorites_lists = $favorites_lists->where("name","like","%$search%");
         }
-        
-        $favorites_total_count = $favorites_lists->count();
 
-        $sorted_favorites_lists = ProductController::sortCollection($favorites_lists,$sort_by);
-        $limited_sorted_favorites_lists = ProductController::filterNumber($sorted_favorites_lists, $page,$limit);
-        $result = $limited_sorted_favorites_lists->with("user")->get();
-        $favorites_lists_count_after_limit = $result->count();
-
-        $response_body = [
-            "favorites_lists" => $result,
-            "count"=>$favorites_lists_count_after_limit,
-            "total_count"=>$favorites_total_count
-        ];
-        
+        $response_body = HelperController::getCollectionAndCount($favorites_lists,$sort_by, $page, $limit,"favorites_lists");
         return response($response_body, 200);
     }
     

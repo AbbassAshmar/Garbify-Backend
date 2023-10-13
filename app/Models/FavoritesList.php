@@ -11,8 +11,9 @@ use Illuminate\Database\Eloquent\Model;
 class FavoritesList extends Model
 {
     use HasFactory;
-
+    protected $with =["user"];
     protected $fillable =['name','user_id', 'created_at', 'views_count','likes_count','public'];
+    
     public function user(){
         return $this->belongsTo(User::class);
     }

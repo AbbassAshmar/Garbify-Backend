@@ -206,4 +206,31 @@ class FavoriteTest extends TestCase
         ]);
     }
 
+    //listByUser method tests 
+
+    public function test_list_by_user():void
+    {
+        $headers = ["Authorization" => "Bearer ".$this->token_2];
+        $request = $this->getJson("api/users/user/favorites",$headers);
+
+        $request->assertOk();
+        $request->assertJson([
+            "favorites" => [
+                ["id"=>$this->fav_1->id],
+                ["id"=>$this->fav_2->id],
+                ["id"=>$this->fav_3->id],
+            ],
+            "count" => 3,
+            "total_count"=>3
+        ]);
+    }
+
+    public function test_list_by_user_unauthenticated():void
+    {
+        $headers = [];
+        $request = $this->getJson("api/users/user/favorites",$headers);
+        $request->assertUnauthorized();
+        $request->assertJson(["message"=>"Unauthenticated."]);
+    }
+
 }

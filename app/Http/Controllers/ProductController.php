@@ -135,26 +135,6 @@ class ProductController extends Controller{
         return $products;
     }
 
-    public static function sortCollection($collection, $sort_by){
-        // + : space 
-
-        if (!$sort_by) {
-            return $collection;
-        }
-        try{
-            $sort_by = str_replace("+"," ",$sort_by);
-            $collection->orderByRaw($sort_by);
-            // check if excuting throws an exception (for sorting with nonexistent columns)
-            $collection->get();
-            return $collection;
-        }
-        catch(Exception $asc){
-            DB::rollBack();
-            $collection->getQuery()->orders=null;
-            return $collection;
-        }
-    }
-
     // total count : count before pagination
     public function setTotalCount($count){
         $this->total_count = $count;
@@ -163,14 +143,6 @@ class ProductController extends Controller{
     public function getTotalCount(){
         if (!$this->total_count) return 0;
         return $this->total_count;
-    }
-    
-    // limit count of collection according to pagination
-    public static function filterNumber($collection, $page, $limit=50){
-        if (!$page) $page = 1;
-        if (!$limit) $limit = 50;
-        $collection = $collection->skip(($page-1) * $limit)->take($limit);
-        return $collection;
     }
 
     private function filterSales($products,$sales){
@@ -195,10 +167,9 @@ class ProductController extends Controller{
         $products = $this->filterColor($products, $filters['color']);
         $products = $this->filterSize($products,$filters['size']);
         $products = $this->filterCategories($products, $filters['categories']);
-        $products = $this->sortCollection($products, $filters['sort_by']);
-        // set $products total count before pagination
-        $this->setTotalCount($products->count());
-        $products = $this->filterNumber($products, $filters['page'],$filters['limit']);
+        $products = HelperController::sortCollection($products, $filters['sort_by']);
+        $this->setTotalCount($products->count());  // set $products total count before pagination
+        $products = HelperController::filterNumber($products, $filters['page'],$filters['limit']);
         $products = $this->filterSales($products, $filters['sales']);
         $products = $this->filterNewArrivals($products, $filters['new_arrivals']);
         return $products;
@@ -228,9 +199,16 @@ class ProductController extends Controller{
             'page' =>$page,
             'limit'=>$limit
         ];
+
         $products = $this->filterProducts($products,$filters);
         $products = $products->get();
-        return (new ProductCollection(ProductResource::collection($products)))->setTotalCount($this->getTotalCount())->response()->setStatusCode(200);
+        $response = [
+            "products"=>ProductResource::collection($products),
+            "total_count" => $this->total_count,
+            "count" => $products->count()
+        ];
+
+        return response($response, 200);
     }
 
     public function retrieveProduct(Request $request , $id){

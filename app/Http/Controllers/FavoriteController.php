@@ -6,6 +6,7 @@ use App\Models\Favorite;
 use App\Models\FavoritesList;
 use Illuminate\Http\Request;
 use App\Models\Product;
+use Symfony\Component\Console\Input\Input;
 
 class FavoriteController extends Controller
 {
@@ -62,24 +63,30 @@ class FavoriteController extends Controller
             });
         }
 
-        $total_count = $favorites->count();
-        $sorted_favorites = ProductController::sortCollection($favorites, $sort_by);
-        $sorted_limited_favorites = ProductController::filterNumber($sorted_favorites, $page, $limit);
-        $result= $sorted_limited_favorites->get();
-        $favorites_count_after_limit = $result->count();
-
-        $response = [
-            "favorites"=> $result,
-            "count"=> $favorites_count_after_limit,
-            "total_count"=> $total_count
-        ];
-
+        $response = HelperController::getCollectionAndCount($favorites,$sort_by,$page,$limit,"favorites");
         return response($response, 200);
     }
 
     //returns all favorites of a logged in user by token (used for displaying users' own favorites)
     public function listByUser(Request $request){
+        $sort_by = $request->input("sort_by");
+        $search = $request->input("q");
+        $limit = $request->input("limit");
+        $page = $request->input("page");
+        $user = $request->user();
 
+        $favorites_list = FavoritesList::where("user_id", $user->id)->first();
+        $favorites = Favorite::where("favorites_list_id", $favorites_list->id);
+
+        //search by products name
+        if ($search){
+            $favorites = $favorites->whereHas("product" , function ($query) use(&$search){
+                $query->where("name" , "like" ,"%$search%");
+            });
+        }
+
+        $response = HelperController::getCollectionAndCount($favorites,$sort_by,$page,$limit,"favorites");
+        return response($response, 200);
     }
 
     //returns favorites 

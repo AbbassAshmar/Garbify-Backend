@@ -20,23 +20,18 @@ class ReviewController extends Controller
         $limit = $request->input('limit') ? $request->input('limit') : 10;
         $sort_by = $request->input("sort-by") ? $request->input("sort-by") : "helpful_count-DESC";
         $product = Product::find($product_id);
+
         if (!$product)
             return response(["error"=>"product not found"], 404);
-        $reviews = $product->reviews();
-        $total_count = $reviews->count();
-        $average_ratings = floatval($reviews->avg("product_rating"));
-        $reviews_sorted = ProductController::sortCollection($reviews,$sort_by);
-        $reviews_sorted_limited = ProductController::filterNumber($reviews_sorted,$page,$limit);
-        $result = $reviews_sorted_limited->get();
-        $count = $result->count();
 
-        $resp = [
-            "reviews"=>ReviewResource::collection($result)->toArray($request),
-            "total_count" => $total_count,
-            "average_ratings" => $average_ratings,
-            "count"=>$count
-        ];
-        return response($resp, 200);
+        $reviews = $product->reviews();
+        $average_ratings = floatval($reviews->avg("product_rating"));
+
+        $response = HelperController::getCollectionAndCount($reviews,$sort_by,$page,$limit,"reviews");
+        $response["average_ratings"] = $average_ratings;
+        $response["reviews"] = ReviewResource::collection($response["reviews"])->toArray($request);
+       
+        return response($response, 200);
     }
 
     // returns all liked reviews (ids) by a user of a product 

@@ -28,18 +28,8 @@ class OrderController extends Controller
               ->join("products", "order_details.product_id","=",'products.id')
               ->where("products.name" , 'like' ,"%$search%");
         }
-        
-        $orders_total_count =$orders->count();
-        $sorted_orders = ProductController::sortCollection($orders , $sort_by);
-        $limited_sorted_orders = ProductController::filterNumber($sorted_orders,$page,$limit); 
-        $result = $limited_sorted_orders->get();
-        $orders_count_after_limit=  $result->count();
 
-        $response_body = [
-            'orders' => OrderResource::collection($result),
-            'total_count' =>$orders_total_count,
-            'count'=>$orders_count_after_limit
-        ];
-        return response($response_body,200);
+        $response = HelperController::getCollectionAndCount($orders,$sort_by,$page,$limit,"orders");
+        return response($response,200);
     }
 }

@@ -16,13 +16,11 @@ class FilterController extends Controller{
                 "name"=>"category",
                 "type"=>"list",
                 'options' => array_map(function($cat){return $cat->category;},$categories)
-
             ],
             [
                 'name' =>"color",
                 'type' =>'list',
                 'options' => array_map(function($color){return $color->color;},$colors)
-                
             ],
             [
                 'name' =>"size",
@@ -42,6 +40,7 @@ class FilterController extends Controller{
 
         ];
     }
+
     // /api/filters or /api/filters?categories[]=men
     function show(Request $request){
         $category = $request->input("categories");
@@ -57,7 +56,6 @@ class FilterController extends Controller{
             return response($this->getResponse($main_categories, $main_colors,$main_sizes,$price),200);
         }
 
-
         $cat = (new ProductController())->getChildByParents($category);
         $children = (new ProductController())->getSingleCategoryChildren($cat);
         $ids = [];
@@ -71,7 +69,6 @@ class FilterController extends Controller{
             'avg'=> intval(Product::whereIn("category_id" , $ids)->avg("price"))
         ];
 
-
         $colors = Color::select("color")->whereHas("products", function($query) use(&$ids){
             $query->whereIn('category_id',$ids);
         })->get()->all();
@@ -80,10 +77,7 @@ class FilterController extends Controller{
             $query->whereIn('category_id',$ids);
         })->get()->all();
         array_pop($children);   
-        
-
 
         return response($this->getResponse($children, $colors,$sizes,$price),200);
-
     }
 }
