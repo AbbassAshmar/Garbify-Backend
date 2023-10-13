@@ -32,7 +32,7 @@ class FavoritesListTest extends TestCase
         parent::setUp();
 
         // create_users 
-        $users =OrderTest::create_users();
+        $users = HelperTest::create_users();
         User::create(['id'=>1,'name'=>"anonymous", 'email'=>"an@email.com",'password'=>"234"]);
         $this->user_1 = $users['users'][0];
         $this->user_2 = $users['users'][1];
@@ -43,7 +43,7 @@ class FavoritesListTest extends TestCase
         $token_3 = $users['tokens'][2];
 
         // create_products
-        $products = OrderTest::create_products();
+        $products = HelperTest::create_products();
         $this->product_1 = $products[0];
         $this->product_2 = $products[1];
         $this->product_3 = $products[2];

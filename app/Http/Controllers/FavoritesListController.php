@@ -28,10 +28,8 @@ class FavoritesListController extends Controller
         if ($sort_by=="most popular") 
             $sort_by = "views_count-5*likes_count+ASC";
             
-        if ($search) {
-            $search = str_replace("+"," ", $search);
+        if ($search) 
             $favorites_lists = $favorites_lists->where("name","like","%$search%");
-        }
 
         $response_body = HelperController::getCollectionAndCount($favorites_lists,$sort_by, $page, $limit,"favorites_lists");
         return response($response_body, 200);
@@ -72,32 +70,12 @@ class FavoritesListController extends Controller
         return response(["likes_count" => $new_count,"action"=>"added"],200);
     }
 
-    public function getUserAndToken($request){
-
-        $auth_header = $request->header("Authorization");
-        if (!$auth_header){
-            return ['token'=>null,'user'=>User::find($this::ANONYMOUS_USER_ID)];
-        }
-
-        $plain_text_token = explode(" ",$auth_header); //retrieve plainTextToken
-        if (count($plain_text_token) <2) {
-            return ['token'=>null,'user'=>User::find($this::ANONYMOUS_USER_ID)];
-        }
-
-        $token = PersonalAccessToken::findToken($plain_text_token[1]); //retrieve token
-        if ($token->tokenable && !(UserController::check_token_expiry($token))){
-            return ['token' => $token , 'user' =>$token->tokenable];
-        }
-
-        return ['token'=>null,'user'=>User::find($this::ANONYMOUS_USER_ID)];
-    }
-
     // view
     public function viewFavoritesList(Request $request ,$id){
         $favorites_list = FavoritesList::find($id);
         if (!$favorites_list) return response(['message' =>'favorites list not found'],400);
 
-        $user_token= $this->getUserAndToken($request);
+        $user_token = HelperController::getUserAndToken($request);
         $user = $user_token['user'];
         $token = $user_token['token'];
 

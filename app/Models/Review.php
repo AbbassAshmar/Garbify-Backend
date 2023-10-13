@@ -39,7 +39,7 @@ class Review extends Model
         return $this->belongsToMany(User::class, "reviews_users",'review_id','user_id');
     }
     public function reviewsImages(){
-        return $this->hasMany(ReviewImage::class);
+        return $this->hasMany(ReviewsImage::class);
     }
 
     public function getReviewImagesListAttribute(){

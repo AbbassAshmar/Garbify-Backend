@@ -20,17 +20,9 @@ use App\Models\User;
 use DateTime;
 class StripeController extends Controller
 {
-
-
     function stripeWebhookEventListener(Request $request){
-
-
         // This is your Stripe CLI webhook secret for testing your endpoint locally.
         $endpoint_secret = 'whsec_61770779793684f8647dd1510507f75d56477ddc95077756f3947b34c0c60157';
-
-        // $payload = @file_get_contents('php://input');
-        // $sig_header = $_SERVER['HTTP_STRIPE_SIGNATURE'];
-
         $sig_header = $request->header("Stripe-Signature");
         $payload = $request->getContent();
         $event = null;
@@ -46,8 +38,8 @@ class StripeController extends Controller
             // Invalid signature
             return response(['error' => $e->getMessage()] , 400);
         }
-        // Handle the event
 
+        // Handle the event
         $address_details = $event['data']['object']['customer_details']['address'];
         $recipient_name =  $event['data']['object']['customer_details']['name'];
         $recipient_phone_number = $event['data']['object']['customer_details']['phone'];
@@ -61,6 +53,7 @@ class StripeController extends Controller
         $user_id = $event['data']['object']['metadata']['user_id'];
         $products = json_decode( $event['data']['object']['metadata']['products'],true);
         $now = (new DateTime())->format('Y-m-d H:i:s');
+
         // create a shipping_address instance 
         $shipping_address = ShippingAddress::create([
             'user_id' => $user_id,
@@ -103,11 +96,9 @@ class StripeController extends Controller
         }
 
         return response(['Received unknown event type'=>$event], 200);
-
     }
     
     function stripeBase(Request $request){
-
         $user = $request->user();
         // $products = $request->input("products");
         $products =[

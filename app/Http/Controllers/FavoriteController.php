@@ -76,7 +76,9 @@ class FavoriteController extends Controller
         $user = $request->user();
 
         $favorites_list = FavoritesList::where("user_id", $user->id)->first();
-        $favorites = Favorite::where("favorites_list_id", $favorites_list->id);
+        $favorites = Favorite::select("favorites.*")
+        ->join("products", "favorites.product_id","=","products.id")
+        ->where("favorites_list_id", $favorites_list->id);
 
         //search by products name
         if ($search){
@@ -89,9 +91,6 @@ class FavoriteController extends Controller
         return response($response, 200);
     }
 
-    //returns favorites 
-    public function retrievetById(Request $request){
-
-    }
+    
 }
 

@@ -18,18 +18,18 @@ class ReviewController extends Controller
     function reviewsByProduct(Request $request , $product_id){
         $page = $request->input("page");
         $limit = $request->input('limit') ? $request->input('limit') : 10;
-        $sort_by = $request->input("sort-by") ? $request->input("sort-by") : "helpful_count-DESC";
+        $sort_by = $request->input("sort-by") ? $request->input("sort-by") : "helpful_count DESC";
         $product = Product::find($product_id);
 
         if (!$product)
-            return response(["error"=>"product not found"], 404);
+            return response(["message"=>"Product not found."], 400);
 
         $reviews = $product->reviews();
         $average_ratings = floatval($reviews->avg("product_rating"));
 
         $response = HelperController::getCollectionAndCount($reviews,$sort_by,$page,$limit,"reviews");
-        $response["average_ratings"] = $average_ratings;
-        $response["reviews"] = ReviewResource::collection($response["reviews"])->toArray($request);
+        // $response["average_ratings"] = $average_ratings;
+        $response["reviews"] = ReviewResource::collection($response["reviews"]);
        
         return response($response, 200);
     }
@@ -45,11 +45,11 @@ class ReviewController extends Controller
     }
  
     // user likes a review of a product
-    function likeReviewByProduct(Request $request, $id){
+    function likeReview(Request $request, $id){
         $user = $request->user();
         $review = Review::find($id);
 
-        if (!$review) return response(["error"=>"review not found."], 404);
+        if (!$review) return response(["message"=>"Review not found."], 404);
 
         $check_like_exists = $review->likes()->where("user_id", $user->id)->first();
         if ($check_like_exists){
@@ -85,11 +85,11 @@ class ReviewController extends Controller
 
         //get the product instance 
         $product =Product::find((int)$validated_data['product_id']);
-        if (!$product) return response(['error'=>'product does not exist'], 400);
+        if (!$product) return response(['message'=>'Product not found.'], 404);
         
         // check if the user has a review on the product 
         $review = Review::where([["user_id", $user->id],['product_id',$product->id]])->first();
-        if ($review) return response(['error'=>"you have already reviewed this product."],400);
+        if ($review) return response(['message'=>"you have already reviewed this product."],400);
         
         // fields to create a review instance 
         $data = [

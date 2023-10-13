@@ -1,13 +1,35 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Laravel\Sanctum\PersonalAccessToken;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\User;
 
 class HelperController extends Controller
 {
+    const ANONYMOUS_USER_ID = 1;
+
+    public static function getUserAndToken($request){
+        $auth_header = $request->header("Authorization");
+        if (!$auth_header){
+            return ['token'=>null,'user'=>User::find(self::ANONYMOUS_USER_ID)];
+        }
+
+        $plain_text_token = explode(" ",$auth_header); //retrieve plainTextToken
+        if (count($plain_text_token) <2) {
+            return ['token'=>null,'user'=>User::find(self::ANONYMOUS_USER_ID)];
+        }
+
+        $token = PersonalAccessToken::findToken($plain_text_token[1]); //retrieve token
+        if ($token->tokenable && !(UserController::check_token_expiry($token))){
+            return ['token' => $token , 'user' =>$token->tokenable];
+        }
+
+        return ['token'=>null,'user'=>User::find(self::ANONYMOUS_USER_ID)];
+    }
+
     public static function getCollectionAndCount($builder,$sort_by, $page, $limit,$name){
         $total_count = $builder->count();
         $sorted_builder = self::sortCollection($builder,$sort_by);
@@ -34,7 +56,6 @@ class HelperController extends Controller
     public static function sortCollection($collection, $sort_by){
         // + : space 
         if (!$collection || !$sort_by) return $collection;
-        
         try{
             $sort_by = str_replace("+"," ",$sort_by);
             $collection->orderByRaw($sort_by);

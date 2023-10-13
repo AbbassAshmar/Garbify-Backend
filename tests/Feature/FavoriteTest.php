@@ -8,7 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 
 use Tests\TestCase;
-
+use Illuminate\Support\Carbon;
 class FavoriteTest extends TestCase
 {
 
@@ -33,7 +33,7 @@ class FavoriteTest extends TestCase
 
         // create_users 
         // ['users' => [user_1 ,] , 'tokens' => [token_1 ,] ]
-        $users =OrderTest::create_users();
+        $users = HelperTest::create_users();
         $this->user_1 = $users['users'][0];
         $this->user_2 = $users['users'][1];
         $this->token_1 = $users['tokens'][0];
@@ -41,7 +41,7 @@ class FavoriteTest extends TestCase
 
         // create_products
         // [product_1 , product_2]
-        $products = OrderTest::create_products();
+        $products = HelperTest::create_products();
         $this->product_1 = $products[0];
         $this->product_2 = $products[1];
         $this->product_3 = $products[2];
@@ -54,10 +54,9 @@ class FavoriteTest extends TestCase
             'likes_count'=>0,
             'public'=>true
         ]);
-        $this->fav_1=Favorite::create(['product_id'=>$this->product_1->id,'favorites_list_id'=>$this->favorites_list_1->id]);
-        $this->fav_2=Favorite::create(['product_id'=>$this->product_2->id,'favorites_list_id'=>$this->favorites_list_1->id]);
-        $this->fav_3=Favorite::create(['product_id'=>$this->product_3->id,'favorites_list_id'=>$this->favorites_list_1->id]);
-
+        $this->fav_1=Favorite::create(['created_at'=>(new Carbon("2022-09-05")),'product_id'=>$this->product_1->id,'favorites_list_id'=>$this->favorites_list_1->id]);
+        $this->fav_2=Favorite::create(['created_at'=>(new Carbon("2021-09-05")),'product_id'=>$this->product_2->id,'favorites_list_id'=>$this->favorites_list_1->id]);
+        $this->fav_3=Favorite::create(['created_at'=>(new Carbon("2023-09-05")),'product_id'=>$this->product_3->id,'favorites_list_id'=>$this->favorites_list_1->id]);
     }
 
     //createFavorite method tests
@@ -204,6 +203,11 @@ class FavoriteTest extends TestCase
             "count" => 2,
             "total_count"=>2
         ]);
+        $request->assertJsonMissing([
+            "favorites"=>[
+                ["id"=>$this->fav_2->id]
+            ]
+        ]);
     }
 
     //listByUser method tests 
@@ -233,4 +237,58 @@ class FavoriteTest extends TestCase
         $request->assertJson(["message"=>"Unauthenticated."]);
     }
 
+    public function test_list_by_user_search():void
+    {
+        $headers = ["Authorization" => "Bearer ".$this->token_2];
+        $request = $this->getJson("api/users/user/favorites?q=air+f",$headers);
+
+        $request->assertOk();
+        $request->assertJson([
+            "favorites" => [
+                ["id"=>$this->fav_1->id],
+                ["id"=>$this->fav_3->id],
+            ],
+            "count" => 2,
+            "total_count"=>2
+        ]);
+        $request->assertJsonMissing([
+            "favorites"=>[
+                ["id"=>$this->fav_2->id]
+            ]
+        ]);
+    }
+    
+    public function test_list_by_user_sort_by_price_DESC():void
+    {
+        $headers = ["Authorization" => "Bearer ".$this->token_2];
+        $request = $this->getJson("api/users/user/favorites?sort+by=price+DESC",$headers);
+
+        $request->assertOk();
+        $request->assertJson([
+            "favorites" => [
+                ["id"=>$this->fav_1->id],
+                ["id"=>$this->fav_3->id],
+                ["id"=>$this->fav_2->id],
+            ],
+            "count" => 3,
+            "total_count"=>3
+        ]);
+    }
+
+    public function test_list_by_user_sort_by_created_at_DESC():void
+    {
+        $headers = ["Authorization" => "Bearer ".$this->token_2];
+        $request = $this->getJson("api/users/user/favorites?sort+by=created_at+DESC",$headers);
+
+        $request->assertOk();
+        $request->assertJson([
+            "favorites" => [
+                ["id"=>$this->fav_3->id],
+                ["id"=>$this->fav_1->id],
+                ["id"=>$this->fav_2->id],
+            ],
+            "count" => 3,
+            "total_count"=>3
+        ]);
+    }
 }
