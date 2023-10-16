@@ -28,7 +28,7 @@ class ReviewController extends Controller
         $average_ratings = floatval($reviews->avg("product_rating"));
 
         $response = HelperController::getCollectionAndCount($reviews,$sort_by,$page,$limit,"reviews");
-        // $response["average_ratings"] = $average_ratings;
+        $response["average_ratings"] = $average_ratings;
         $response["reviews"] = ReviewResource::collection($response["reviews"]);
        
         return response($response, 200);

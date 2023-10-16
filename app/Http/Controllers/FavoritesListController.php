@@ -35,14 +35,14 @@ class FavoritesListController extends Controller
         return response($response_body, 200);
     }
     
-    // get favoritesList of a user by token 
+    // get favoritesList of a user by token  (user retreives his own favorites list)
     public function retrieveByUser(Request $request){
         $user = $request->user();
         $favorites_list = FavoritesList::where("user_id" , $user->id)->first();
         return response(["favorites_list" => $favorites_list], 200);
     }
 
-    // get one FavoritesList by id
+    // get one FavoritesList by id (user retrieves other user's favorites list)
     public function retrieveById(Request $request ,$id){
         $favorites_list = FavoritesList::with("user")->find($id);
         if (!$favorites_list) return response(["message"=>"Favorites list not found."],404);

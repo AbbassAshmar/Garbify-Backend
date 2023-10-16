@@ -37,9 +37,14 @@ class HelperController extends Controller
         $result = $limited_sorted_builder->get();
         $count_after_limit = $result->count();
         $returned_arr = [
-            $name => $result,
-            "count" => $count_after_limit,
-            "total_count" => $total_count
+            "data" => $result,
+            "metadata" => [
+                "count" => $count_after_limit,
+                "total_count" => $total_count,
+                "pages_count" => ceil( $total_count / $limit), 
+                "current_page" => $page,
+                "limit" => $limit,
+            ]
         ];
         return $returned_arr;
     }

@@ -15,7 +15,7 @@ class ProductFullResource extends JsonResource
      * @return array<string, mixed>
      */
     
-     // returns an object where colors are keys and lists of images are values accordingly
+    // returns an object where colors are keys and lists of images are values accordingly
     public function colorsObject(array $colors){
         $obj = []; 
         for ($i = 0 ; $i < count($colors) ; $i++){

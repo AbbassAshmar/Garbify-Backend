@@ -44,7 +44,7 @@ class FavoriteController extends Controller
         return response($response, 201);
     }
 
-    // returns all favorites of a favorites list (used for displaying other users' favorites)
+    // returns all favorites of a favorites list (user get other user's favorites)
     public function listByFavoritesList(Request $request, $id){
         $page = $request->input("page");
         $limit = $request->input("limit");
