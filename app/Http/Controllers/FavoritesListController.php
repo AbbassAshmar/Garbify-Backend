@@ -18,6 +18,9 @@ class FavoritesListController extends Controller
 
     // get all public FavoritesLists of all users
     public function listFavoritesList(Request $request){
+        $user_token =  HelperController::getUserAndToken($request);
+        $current_user = $user_token["user"];
+    
         $page = $request->input("page");
         $limit = $request->input("limit");
         $sort_by = $request->input("sort_by")?$request->input("sort_by"):"most popular";
@@ -32,21 +35,32 @@ class FavoritesListController extends Controller
             $favorites_lists = $favorites_lists->where("name","like","%$search%");
 
         $response_body = HelperController::getCollectionAndCount($favorites_lists,$sort_by, $page, $limit,"favorites_lists");
+        $response_body['data'] = FavoritesListResource::collection_custom($response_body['data'],$current_user);
+
         return response($response_body, 200);
     }
     
     // get favoritesList of a user by token  (user retreives his own favorites list)
     public function retrieveByUser(Request $request){
-        $user = $request->user();
-        $favorites_list = FavoritesList::where("user_id" , $user->id)->first();
-        return response(["favorites_list" => $favorites_list], 200);
+        $current_user = $request->user();
+
+        $favorites_list = FavoritesList::where("user_id" , $current_user->id)->first();
+        if (!$favorites_list) return response(["message"=>"Favorites list not found."],404);
+
+        $resource = new FavoritesListResource($favorites_list,$current_user);
+        return response(["data" => $resource], 200);
     }
 
     // get one FavoritesList by id (user retrieves other user's favorites list)
     public function retrieveById(Request $request ,$id){
+        $user_token =  HelperController::getUserAndToken($request);
+        $current_user = $user_token["user"];
+
         $favorites_list = FavoritesList::with("user")->find($id);
         if (!$favorites_list) return response(["message"=>"Favorites list not found."],404);
-        return response(['favorites_list'=>$favorites_list],200);
+
+        $resource = new FavoritesListResource($favorites_list,$current_user);
+        return response(["data" => $resource], 200);
     }
 
     // like and like remove
