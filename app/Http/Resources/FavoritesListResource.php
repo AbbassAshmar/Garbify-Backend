@@ -16,8 +16,10 @@ class FavoritesListResource extends JsonResource
      *
      * @return array<string, mixed>
      */
-    public function __construct($resource, $currentUser=null){
+    public function __construct($resource, $key=null,$currentUser=null){
         parent::__construct($resource);
+
+        //collection() uses the constructor and sets the second arg to key
         if ($currentUser instanceof User)
             self::$currentUser = $currentUser;
     }
@@ -29,6 +31,7 @@ class FavoritesListResource extends JsonResource
             ["is_liked_by_current_user" => $this->IsLikedByCurrentUser(self::$currentUser)]      
         );
     }
+    
     public static function collection_custom($resource, $user)
     {   
         self::$currentUser = $user;

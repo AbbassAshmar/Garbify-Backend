@@ -17,7 +17,7 @@ class ReviewController extends Controller
     // returns all reviews of a product 
     function reviewsByProduct(Request $request , $product_id){
         $page = $request->input("page");
-        $limit = $request->input('limit') ? $request->input('limit') : 10;
+        $limit = $request->input('limit');
         $sort_by = $request->input("sort-by") ? $request->input("sort-by") : "helpful_count DESC";
         $product = Product::find($product_id);
 
@@ -27,9 +27,8 @@ class ReviewController extends Controller
         $reviews = $product->reviews();
         $average_ratings = floatval($reviews->avg("product_rating"));
 
-        $response = HelperController::getCollectionAndCount($reviews,$sort_by,$page,$limit,"reviews");
-        $response["average_ratings"] = $average_ratings;
-        $response["reviews"] = ReviewResource::collection($response["reviews"]);
+        $response = HelperController::getCollectionAndCount($reviews,$sort_by,$page,$limit,ReviewResource::class);
+        $response['metadata']['average_rating'] = $average_ratings;
        
         return response($response, 200);
     }

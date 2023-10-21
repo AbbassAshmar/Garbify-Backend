@@ -20,11 +20,12 @@ class FavoriteController extends Controller
 
         // create Favorites List for the user if not created
         $favorite_list = FavoritesList::where("user_id", $user->id)->first();
-        if (!$favorite_list)
-        $favorite_list = FavoritesList::create([
-            'user_id' =>$user->id,
-            'name' =>$user->name ."'s Favorites",
-        ]);
+        if (!$favorite_list){
+            $favorite_list = FavoritesList::create([
+                'user_id' =>$user->id,
+                'name' =>$user->name ."'s Favorites",
+            ]);
+        }
 
         // delete favorite if exists ,else create it 
         $favorite_instance=$favorite_list->favorites()->where("product_id", $product->id)->first();
@@ -32,11 +33,13 @@ class FavoriteController extends Controller
             $favorite_instance->delete();
             return response(['action' => 'deleted'] , 200);
         }
+        
         $data = [
             'product_id'=>$product->id,
             'favorites_list_id'=>$favorite_list->id
         ];
         $favorite_instance = Favorite::create($data);
+
         $response = [
             'action' => 'created',
             'favorite' => $favorite_instance
@@ -63,7 +66,7 @@ class FavoriteController extends Controller
             });
         }
 
-        $response = HelperController::getCollectionAndCount($favorites,$sort_by,$page,$limit,"favorites");
+        $response = HelperController::getCollectionAndCount($favorites,$sort_by,$page,$limit);
         return response($response, 200);
     }
 
@@ -87,7 +90,7 @@ class FavoriteController extends Controller
             });
         }
 
-        $response = HelperController::getCollectionAndCount($favorites,$sort_by,$page,$limit,"favorites");
+        $response = HelperController::getCollectionAndCount($favorites,$sort_by,$page,$limit);
         return response($response, 200);
     }
 

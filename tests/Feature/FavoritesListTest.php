@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Laravel\Sanctum\PersonalAccessToken;
 use Tests\TestCase;
+use Tests\Feature\HelperTest;
 
 class FavoritesListTest extends TestCase
 {
@@ -27,6 +28,7 @@ class FavoritesListTest extends TestCase
     public $favorites_list_3;
     public $favorites_list_4;
     public $favorite_1;
+
     public function setUp():void
     {
         parent::setUp();
@@ -215,7 +217,7 @@ class FavoritesListTest extends TestCase
         $request = $this->getJson("api/favorites_lists/". $this->favorites_list_1->id);
         $request->assertOk();
         $request->assertJsonStructure([
-            "favorites_list"=>[
+            "data"=>[
                 "id",
                 "name",
                 "created_at",
@@ -224,6 +226,7 @@ class FavoritesListTest extends TestCase
                 'public', 
                 'user_id', 
                 "user",
+                'is_liked_by_current_user'
             ]
         ]);
     }
@@ -243,14 +246,15 @@ class FavoritesListTest extends TestCase
         $request = $this->getJson("api/users/user/favorites_lists",$headers);
         $request->assertOk();
         $request->assertJsonStructure([
-            "favorites_list"=>[
+            "data"=>[
                 "id",
                 'name',
                 'likes_count',
                 'views_count',
                 'public',
                 'created_at',
-                'user_id'
+                'user_id',
+                'is_liked_by_current_user'
             ]
         ]);
     }
@@ -271,7 +275,7 @@ class FavoritesListTest extends TestCase
         $request = $this->getJson("api/favorites_lists");
         $request->assertOk();
         $request->assertJson([
-            "favorites_lists" =>[
+            "data" =>[
                 [
                     "id" =>$this->favorites_list_2->id,
                 ],
@@ -282,8 +286,13 @@ class FavoritesListTest extends TestCase
                     "id" =>$this->favorites_list_1->id
                 ]
             ],
-            "count"=>3,
-            "total_count"=>3
+            'metadata'=>[
+                "count"=>3,
+                "total_count"=>3,
+                "pages_count" => 1, 
+                "current_page" => 1,
+                "limit" => 50,
+            ]
         ]);
         $request->assertJsonMissing([
             "id"=>$this->favorites_list_4->id
@@ -295,9 +304,14 @@ class FavoritesListTest extends TestCase
         $request = $this->getJson("api/favorites_lists?page=1&limit=1");
         $request->assertOk();
         $request->assertJson([
-            "favorites_lists" =>[],
-            "count"=>1,
-            "total_count"=>3
+            "data" =>[],
+            'metadata'=>[
+                "count"=>1,
+                "total_count"=>3,
+                "pages_count" => 3, // ciel of total_count/limit 
+                "current_page" => 1,
+                "limit" => 1,
+            ]
         ]);
         $request->assertJsonMissing([
             "id"=>$this->favorites_list_4->id
@@ -309,7 +323,7 @@ class FavoritesListTest extends TestCase
         $request= $this->getJson("api/favorites_lists?sort+by=views_count+DESC");
         $request->assertOk();
         $request->assertJson([
-            "favorites_lists"=>[
+            "data"=>[
                 [
                     'id' =>$this->favorites_list_3->id,
                 ],
@@ -320,8 +334,13 @@ class FavoritesListTest extends TestCase
                     "id" =>$this->favorites_list_1->id
                 ]
             ],
-            "count"=>3,
-            "total_count"=>3
+            'metadata'=>[
+                "count"=>3,
+                "total_count"=>3,
+                "pages_count" => 1, 
+                "current_page" => 1,
+                "limit" => 50,
+            ]
         ]);
     }
 
@@ -330,7 +349,7 @@ class FavoritesListTest extends TestCase
         $request= $this->getJson("api/favorites_lists?sort-by=likes_count-DESC");
         $request->assertOk();
         $request->assertJson([
-            "favorites_lists"=>[
+            "data"=>[
                 [
                     'id' =>$this->favorites_list_2->id,
                 ],
@@ -341,8 +360,13 @@ class FavoritesListTest extends TestCase
                     "id" =>$this->favorites_list_1->id
                 ]
             ],
-            "count"=>3,
-            "total_count"=>3
+            'metadata'=>[
+                "count"=>3,
+                "total_count"=>3,
+                "pages_count" => 1, 
+                "current_page" => 1,
+                "limit" => 50,
+            ]
         ]);
     }
 
@@ -351,7 +375,7 @@ class FavoritesListTest extends TestCase
         $request= $this->getJson("api/favorites_lists?q=abc");
         $request->assertOk();
         $request->assertJson([
-            "favorites_lists"=>[
+            "data"=>[
                 [
                     'id' =>$this->favorites_list_2->id,
                 ],
@@ -359,8 +383,13 @@ class FavoritesListTest extends TestCase
                     "id" =>$this->favorites_list_1->id
                 ]
             ],
-            "count"=>2, // count after pagination (limit)
-            "total_count"=>2 // total count in search result
+            'metadata'=>[
+                "count"=>2, // count after pagination (limit)
+                "total_count"=>2, // total count in search result
+                "pages_count" => 1, 
+                "current_page" => 1,
+                "limit" => 50,
+            ]
         ]);
     }
 

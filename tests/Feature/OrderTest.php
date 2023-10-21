@@ -15,6 +15,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 use Illuminate\Support\Carbon;
+use Tests\Feature\HelperTest;
 class OrderTest extends TestCase
 {
     use RefreshDatabase;
@@ -52,6 +53,7 @@ class OrderTest extends TestCase
         $size_1 = HelperTest::create_sizes()[0];
         $color_1 = HelperTest::create_colors()[0];
         $products = HelperTest::create_products();
+
         $this->product_1 = $products[0];
         $this->product_2 = $products[1];
         $product_3 = $products[2];
@@ -193,6 +195,7 @@ class OrderTest extends TestCase
             "size_id" =>$size_1->id,
             'product_total_price' => 55
         ]);
+        
         $this->order_1 = $order_1;
         $this->order_4 =$order_4;
         $this->order_3 = $order_3;
@@ -211,7 +214,7 @@ class OrderTest extends TestCase
         $request = $this->getJson("/api/orders",$headers);
         $request->assertOk();
         $request->assertJson([
-            'orders'=>[
+            'data'=>[
                 [
                     "id"=>$this->order_1->id,
                     "created_at"=>$this->order_1->created_at->jsonSerialize(),
@@ -236,8 +239,13 @@ class OrderTest extends TestCase
                     ]
                 ]
             ],
-            'total_count' =>1,
-            "count" => 1
+            'metadata'=>[
+                "count"=>1,
+                "total_count"=>1,
+                "pages_count" => 1, 
+                "current_page" => 1,
+                "limit" => 50,
+            ]
         ]);
     }
 
@@ -255,8 +263,13 @@ class OrderTest extends TestCase
         $request = $this->getJson("/api/orders?page=1&limit=1",$headers);
         $request->assertOk();
         $request->assertJson([
-            "count"=> 1,
-            'total_count' =>3
+            'metadata'=>[
+                "count"=>1,
+                "total_count"=>3,
+                "pages_count" => 3, 
+                "current_page" => 1,
+                "limit" => 1,
+            ]
         ]);
     }
 
@@ -267,12 +280,17 @@ class OrderTest extends TestCase
         $request = $this->getJson("/api/orders?sort-by=total_cost-DESC",$headers);
         $request->assertOk();
         $request->assertJson([
-            'total_count' =>3,
-            "count"=> 3,
-            "orders" =>[
+            "data" =>[
                 ["id"=>$this->order_5->id],
                 ["id"=>$this->order_4->id],
                 ["id"=>$this->order_3->id]
+            ],
+            'metadata'=>[
+                "count"=>3,
+                "total_count"=>3,
+                "pages_count" => 1, 
+                "current_page" => 1,
+                "limit" => 50,
             ]
         ]);
     }
@@ -283,12 +301,17 @@ class OrderTest extends TestCase
         $request = $this->getJson("/api/orders?sort+by=total_cost+ASC",$headers);
         $request->assertOk();
         $request->assertJson([
-            'total_count' =>3,
-            "count"=> 3,
-            "orders" =>[
+            "data" =>[
                 ["id"=>$this->order_3->id],
                 ["id"=>$this->order_4->id],
                 ['id' =>$this->order_5->id]
+            ],
+            'metadata'=>[
+                "count"=>3,
+                "total_count"=>3,
+                "pages_count" => 1, 
+                "current_page" => 1,
+                "limit" => 50,
             ]
         ]);
     }
@@ -299,13 +322,18 @@ class OrderTest extends TestCase
         $request = $this->getJson("/api/orders?sort+by=created_at+DESC",$headers);
         $request->assertOk();
         $request->assertJson([
-            "orders" =>[
+            "data" =>[
                 ["id"=>$this->order_5->id],
                 ["id"=>$this->order_4->id],
                 ["id"=>$this->order_3->id]
             ],
-            'total_count' =>3,
-            "count"=> 3
+            'metadata'=>[
+                "count"=>3,
+                "total_count"=>3,
+                "pages_count" => 1, 
+                "current_page" => 1,
+                "limit" => 50,
+            ]
         ]);
     }
     
@@ -315,13 +343,18 @@ class OrderTest extends TestCase
         $request = $this->getJson("/api/orders?sort+by=created_at+ASC",$headers);
         $request->assertOk();
         $request->assertJson([
-            "orders" =>[
+            "data" =>[
                 ["id"=>$this->order_3->id],
                 ["id"=>$this->order_4->id],
                 ['id'=>$this->order_5->id],
             ],
-            'total_count' =>3,
-            "count"=> 3,
+            'metadata'=>[
+                "count"=>3,
+                "total_count"=>3,
+                "pages_count" => 1, 
+                "current_page" => 1,
+                "limit" => 50,
+            ]
         ]);
     }
 
@@ -334,12 +367,17 @@ class OrderTest extends TestCase
 
         //product of Order_3 is "air force",product of order_5 is "air force 2)
         $request->assertJson([
-            "orders" =>[
+            "data" =>[
                 ['id'=>$this->order_5->id],
                 ["id"=>$this->order_3->id]
             ],
-            'total_count' =>2,
-            "count"=> 2
+            'metadata'=>[
+                "count"=>2,
+                "total_count"=>2,
+                "pages_count" => 1, 
+                "current_page" => 1,
+                "limit" => 50,
+            ]
         ]);
     }
 }

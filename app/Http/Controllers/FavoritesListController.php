@@ -34,7 +34,7 @@ class FavoritesListController extends Controller
         if ($search) 
             $favorites_lists = $favorites_lists->where("name","like","%$search%");
 
-        $response_body = HelperController::getCollectionAndCount($favorites_lists,$sort_by, $page, $limit,"favorites_lists");
+        $response_body = HelperController::getCollectionAndCount($favorites_lists,$sort_by, $page, $limit);
         $response_body['data'] = FavoritesListResource::collection_custom($response_body['data'],$current_user);
 
         return response($response_body, 200);
@@ -47,7 +47,7 @@ class FavoritesListController extends Controller
         $favorites_list = FavoritesList::where("user_id" , $current_user->id)->first();
         if (!$favorites_list) return response(["message"=>"Favorites list not found."],404);
 
-        $resource = new FavoritesListResource($favorites_list,$current_user);
+        $resource = new FavoritesListResource($favorites_list,null,$current_user);
         return response(["data" => $resource], 200);
     }
 
@@ -59,7 +59,7 @@ class FavoritesListController extends Controller
         $favorites_list = FavoritesList::with("user")->find($id);
         if (!$favorites_list) return response(["message"=>"Favorites list not found."],404);
 
-        $resource = new FavoritesListResource($favorites_list,$current_user);
+        $resource = new FavoritesListResource($favorites_list,null,$current_user);
         return response(["data" => $resource], 200);
     }
 

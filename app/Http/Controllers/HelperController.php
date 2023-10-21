@@ -6,6 +6,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
+use Illuminate\Http\Resources\Json\JsonResource;
 
 class HelperController extends Controller
 {
@@ -37,7 +38,7 @@ class HelperController extends Controller
         return $return_anonymous;
     }
 
-    public static function getCollectionAndCount($builder,$sort_by, $page, $limit=50,$name){
+    public static function getCollectionAndCount($builder,$sort_by, $page, $limit=50,$resource=null){
         $total_count = $builder->count();
         $sorted_builder = self::sortCollection($builder,$sort_by);
 
@@ -48,7 +49,7 @@ class HelperController extends Controller
 
         $count_after_limit = $result->count();
         $returned_arr = [
-            "data" => $result,
+            "data" => $resource ?  $resource::collection($result) : $result,
             "metadata" => [
                 "count" => $count_after_limit,
                 "total_count" => $total_count,

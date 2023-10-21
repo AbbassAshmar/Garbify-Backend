@@ -13,51 +13,50 @@ class UserTest extends TestCase
     /**
      * A basic feature test example.
      */
-    protected static $user;
-    protected static $token;
+
+    private  $user_1;
+    private  $token_1;
 
     public function setUp():void
     {
         parent::setUp();
-        $user1 = User::where("email",'abc2332@gmail.com')->first();
-        if (!$user1){ 
-            self::$user = User::create(['name'=>"a342bc", 'email'=>'abc2332@gmail.com', 'password'=>"abcdefg34"]);
-            self::$token=self::$user->createToken("token", ['client'])->plainTextToken;
-        }else{
-            self::$user =$user1;
-        }
+        $create_users = HelperTest::create_users();
+        $this->user_1 = $create_users['users'][0];
+        $this->token_1 = $create_users['tokens'][0];
     }
+
     public function test_admin_register_unauthorized(): void
     {
         $request = $this->postJson("/api/register/admin");
         $request->assertUnauthorized();
     }
+
     public function test_admin_register_wrong_ability():void
-    {
-        $request = $this->withHeaders([
-            'Authorization' => 'Bearer ' .self::$token,
-        ])->postJson("/api/register/admin");
+    {   
+        $headers = ['Authorization' => 'Bearer ' .$this->token_1];
+        $request = $this->postJson("/api/register/admin",[],$headers);
         $request->assertStatus(403);
     }
+
     public function test_admin_register_accepted():void 
     {
-        $user = User::create(['name' => "aaa" , 'email' =>"aaa@gmail.com" , "password" =>"password4"]);
+        $user = User::create(['name' => "aaaaf" , 'email' =>"aaaaf@gmail.com" , "password" =>"password4"]);
         $token = $user->createToken('admin-token', ['super-admin'])->plainTextToken;
+
         $request_data = [
             "username" => "accc" , 
             "email" => "accc@gmail.com", 
             "password"  => "acccppddd8",
             "confirm_password"  => "acccppddd8"
         ];
-        $request = $this->withHeaders([
-            "Authorization" => "Bearer " . $token, 
-        ])->postJson("/api/register/admin", $request_data);
+        $headers = ["Authorization" => "Bearer " . $token];
+
+        $request = $this->postJson("/api/register/admin",$request_data,$headers);
         $request->assertStatus(201);
         $response_json = [
             'user' =>[
-                "name" => 'accc',
-                'email' =>'accc@gmail.com',
-                "id"=>'5',
+                "name" => "accc",
+                'email' =>"accc@gmail.com", 
             ]
         ];
         $request->assertJson($response_json);

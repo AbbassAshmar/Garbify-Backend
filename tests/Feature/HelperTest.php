@@ -10,9 +10,9 @@ use Illuminate\Support\Carbon;
 class HelperTest {
 
     public static function create_users(){
-        $user_1 = User::create(["id"=>2,"email"=>"abc@gmail.com", "password"=>"abdc", "name"=>"abc"]);
-        $user_2 = User::create(["id"=>3,"email"=>"User2@gmail.com", "password"=>"abdc", "name"=>"fjsabcdio"]);
-        $user_3 = User::create(["id"=>4,"email"=>"user_3@gmail.com", "password"=>"abdc", "name"=>"asiodfj"]);
+        $user_1 = User::create(["id"=>2000,"email"=>"abc@gmail.com", "password"=>"abdc", "name"=>"abc"]);
+        $user_2 = User::create(["id"=>3000,"email"=>"User2@gmail.com", "password"=>"abdc", "name"=>"fjsabcdio"]);
+        $user_3 = User::create(["id"=>4000,"email"=>"user_3@gmail.com", "password"=>"abdc", "name"=>"asiodfj"]);
 
         $token_1 = $user_1->createToken("user_token",['client'],Carbon::now()->addDays(1))->plainTextToken;
         $token_2 = $user_2->createToken("user_token",['client'],Carbon::now()->addDays(1))->plainTextToken;
@@ -59,6 +59,7 @@ class HelperTest {
         
         // create products 
         $product_1 = Product::create([
+            'id' =>2000,
             'name'=>'air force' ,
             'quantity'=>322 , 
             'category_id' => $category->id,
@@ -68,6 +69,7 @@ class HelperTest {
             'created_at' => Carbon::now()
         ]);
         $product_2 = Product::create([
+            'id' =>3000,
             'name'=>'Jordan 4' ,
             'quantity'=>322 , 
             'category_id' => $category->id,
@@ -77,6 +79,7 @@ class HelperTest {
             'created_at' => Carbon::now()
         ]);
         $product_3 = Product::create([
+            'id' =>4000,
             'name'=>'air force 2' ,
             'quantity'=>200, 
             'category_id' => $category->id,

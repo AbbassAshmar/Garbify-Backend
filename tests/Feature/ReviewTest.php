@@ -12,6 +12,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 use App\Models\User;
+use Tests\Feature\HelperTest;
+
 class ReviewTest extends TestCase
 {
     use RefreshDatabase;
@@ -75,13 +77,18 @@ class ReviewTest extends TestCase
         $request = $this->getJson("/api/products/" . $this->product_1->id ."/reviews");
         $request->assertStatus(200);
         $request->assertJsonStructure(
-            [
-                'reviews' , 
-                'total_count',
-                'count'
-            ]
+            ['data' , 'metadata']
         );
-        $request->assertJson(['total_count'=>2]);
+        $request->assertJson([
+            'metadata'=>[
+                'average_rating'=>2.75,
+                "count"=>2,
+                "total_count"=>2,
+                "pages_count" => 1, 
+                "current_page" => 1,
+                "limit" => 50,
+            ]
+        ]);
     }
 
     public function test_reviews_by_product_limit(): void
@@ -89,49 +96,82 @@ class ReviewTest extends TestCase
         $request = $this->getJson("/api/products/" . $this->product_1->id ."/reviews?page=1&limit=1");
         $request->assertStatus(200);
         $request->assertJsonStructure(
-            [
-                'reviews' , 
-                'total_count',
-                'count'
-            ]
+            ['data' , 'metadata',]
         );
-        $request->assertJson(['total_count'=>2]);
-        $request->assertJson(['count' => 1]);
+        $request->assertJson([
+            'metadata'=>[
+                "count"=>1,
+                "total_count"=>2,
+                "pages_count" => 2, 
+                "current_page" => 1,
+                "limit" => 1,
+                'average_rating' => 2.75,
+            ]
+        ]);
 
-        // if no page provided , no products are skipped , just is limited
+        // if no page provided , no products are skipped , just limited
         $request2 = $this->getJson("/api/products/" . $this->product_1->id ."/reviews?limit=1");
-        $request2->assertJson(['total_count'=>2]);
-        $request2->assertJson(['count' => 1]);
+        $request2->assertJson([
+            'metadata'=>[
+                "count"=>1,
+                "total_count"=>2,
+                "pages_count" => 2, // ceil of total_count/limit
+                "current_page" => 1,
+                "limit" => 1,
+                'average_rating' => 2.75,
+            ]
+        ]);
 
         $request3 = $this->getJson("/api/products/" . $this->product_1->id ."/reviews?limit=10");
-        $request3->assertJson(['total_count'=>2]);
-        $request3->assertJson(['count' => 2]);
+        $request3->assertJson([
+            'metadata'=>[
+                "count"=>2,
+                "total_count"=>2,
+                "pages_count" => 1, 
+                "current_page" => 1,
+                "limit" => 10,
+                'average_rating' => 2.75,
+            ]
+        ]);
 
     }
 
     public function test_reviews_by_product_sort_by_created_at():void
     {
         $request = $this->getJson("/api/products/" . $this->product_1->id ."/reviews?sort+by=created_at+DESC");
-        $request->assertJson(['count'=>2]);
         //assert that review_1 is before review_2 
         $request->assertJson([
-            'reviews'=>[
+            'data'=>[
                 ['id'=>$this->review_1->id],
                 ['id'=>$this->review_2->id],
+            ],
+            'metadata'=>[
+                "count"=>2,
+                "total_count"=>2,
+                "pages_count" => 1, 
+                "current_page" => 1,
+                "limit" => 50,
+                'average_rating' => 2.75,
             ]
         ]);
     }
 
-    public function test_reviews_by_product_sort_by_helpful_count():void
+    public function test_reviews_by_product_sort_by_helpful_count_desc():void
     {
         $request = $this->getJson("/api/products/" . $this->product_1->id ."/reviews?sort+by=helpful_count+DESC");
         //assert that review_2 is before review_1
         $request->assertJson([
-            'reviews'=>[
+            'data'=>[
                 ['id'=>$this->review_1->id],
                 ['id'=>$this->review_2->id],
             ],
-            'count' => 2
+            'metadata'=>[
+                "count"=>2,
+                "total_count"=>2,
+                "pages_count" => 1, 
+                "current_page" => 1,
+                "limit" => 50,
+            ]
         ]);
     }
 
@@ -140,11 +180,17 @@ class ReviewTest extends TestCase
         $request = $this->getJson("/api/products/" . $this->product_1->id ."/reviews?sort+by=helpful_count+ASC");
         //assert that review_2 is before review_1
         $request->assertJson([
-            'reviews'=>[
+            'data'=>[
                 ['id'=>$this->review_1->id],
                 ['id'=>$this->review_2->id],
             ],
-            'count' => 2
+            'metadata'=>[
+                "count"=>2,
+                "total_count"=>2,
+                "pages_count" => 1, 
+                "current_page" => 1,
+                "limit" => 50,
+            ]
         ]);
     }
 
@@ -199,6 +245,7 @@ class ReviewTest extends TestCase
         //helpful_count did not change
         $this->assertEquals($this->review_1->helpful_count,$previous_helpful_count);
     }
+
     public function test_like_review_does_not_exist():void
     {
         $headers= ['Authorization' => "Bearer " .$this->token_2];

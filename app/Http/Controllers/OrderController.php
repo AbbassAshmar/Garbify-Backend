@@ -23,14 +23,15 @@ class OrderController extends Controller
         $orders = $user->orders()->where("canceled_at" , null);
 
         // search by product name if q is provided 
-        if ($search)
+        if ($search){
             $orders = $orders->select("orders.*")
               ->join("order_details", "order_details.order_id", "=","orders.id")
               ->join("products", "order_details.product_id","=",'products.id')
               ->where("products.name" , 'like' ,"%$search%");
+        }
 
-        $response = HelperController::getCollectionAndCount($orders,$sort_by,$page,$limit,"orders");
-        $response['orders'] = OrderResource::collection($response["orders"]);
+        $response = HelperController::getCollectionAndCount($orders,$sort_by,$page,$limit,OrderResource::class);
+        // $response['data'] = OrderResource::collection($response["data"]);
         
         return response($response,200);
     }

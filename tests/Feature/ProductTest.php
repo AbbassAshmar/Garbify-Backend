@@ -17,30 +17,30 @@ use App\Models\User;
 class ProductTest extends TestCase
 {
     use RefreshDatabase;
-    protected static $main_product;
+    private $product_1;
     
     public function setUp():void {
         parent::setUp();
         $category = Category::create(['category' => "men" , 'parent_id' => null]);
-        $product = Product::create(['name'=>'air force' ,
-        'quantity'=>322 , 
-        'category_id' => $category->id,
-        'price'=>345,
-        'description'=>'air force for men',
-        'type'=>'mens shoes',
-        'created_at' => (new DateTime())->format('Y-m-d H:i:s')
+        $this->product_1 = Product::create([
+            'name'=>'air force' ,
+            'quantity'=>322 , 
+            'category_id' => $category->id,
+            'price'=>345,
+            'description'=>'air force for men',
+            'type'=>'mens shoes',
+            'created_at' => (new DateTime())->format('Y-m-d H:i:s')
         ]);
         $color = Color::create(['color'=>"red"]);
         $size = Size::create(['size'=>"xl",'unit'=>"clothes"]);
-        $sale = Sale::create(['quantity'=>100,'product_id' => $product->id, "sale_percentage"=>20.00 , "starts_at"=>"2022-1-2" , "ends_at"=>"2024-2-2"]);
-        $product->colors()->attach([$color->id]);
-        $product->sizes()->attach([$size->id]);
-        self::$main_product = $product;
+        $sale = Sale::create(['quantity'=>100,'product_id' => $this->product_1->id, "sale_percentage"=>20.00 , "starts_at"=>"2022-1-2" , "ends_at"=>"2024-2-2"]);
+        $this->product_1->colors()->attach([$color->id]);
+        $this->product_1->sizes()->attach([$size->id]);
     }
 
     public function test_retrieve_product(): void
     {   
-        $response = $this->getJson('/api/products/' . self::$main_product->id);
+        $response = $this->getJson('/api/products/' . $this->product_1->id);
         $response->assertStatus(200);
         $response->assertJsonStructure(
             ["product" =>
@@ -67,28 +67,28 @@ class ProductTest extends TestCase
             ]
         );
     }
+
     public function test_retrieve_product_does_not_exist()
     {
-        $request  = $this->getJson("/api/products/" . (self::$main_product->id + 349));
+        $request  = $this->getJson("/api/products/" . ($this->product_1->id + 349));
         $request->assertStatus(404);
-        $request->assertJson([
-            "error" => "Product Not Found."
-        ]);
+        $request->assertJson(["error" => "Product Not Found."]);
     }
 
     public function test_create_product_wrong_ability(){
         $user = User::create(['name'=>"user" , 'email'=>'user@gmail.com', 'password'=>'user']);
         $token = $user->createToken("token", ['client'])->plainTextToken;
-        $request = $this->withHeaders([
-            'accept'=>"application/json",
-            'Authorization' =>"Bearer ".$token
-        ])->postJson("/api/products");
+        $headers = ['accept'=>"application/json",'Authorization' =>"Bearer ".$token];
+
+        $request = $this->postJson("/api/products",[],$headers);
         $request->assertForbidden();
     }
 
     public function test_create_product_admin_ability(){
         $user = User::create(['name'=>"admin" , 'email'=>'admin@gmail.com', 'password'=>'admin']);
         $token = $user->createToken("token", ['admin'])->plainTextToken;
+        $headers = ['accept'=>"application/json",'Authorization' =>"Bearer ".$token];
+
         $body = [
             "name" => "leather jacket",
             "colors" => ['black','red'], 
@@ -101,10 +101,7 @@ class ProductTest extends TestCase
             'images' => []
         ];
 
-        $request = $this->withHeaders([
-            'accept'=>"application/json",
-            'Authorization' =>"Bearer ".$token
-        ])->postJson("/api/products",$body);
+        $request = $this->postJson("/api/products",$body,$headers);
         $request->assertCreated();
     }
 }
