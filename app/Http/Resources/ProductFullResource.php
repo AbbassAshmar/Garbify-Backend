@@ -7,7 +7,6 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class ProductFullResource extends JsonResource
 {
-    public static $wrap = "product";
 
     /**
      * Transform the resource into an array.
@@ -29,7 +28,7 @@ class ProductFullResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'pk' =>$this->id,
+            'id' =>$this->id,
             'name' => $this->name,
             'quantity' =>$this->quantity,
             'price' =>$this->price,
@@ -50,7 +49,7 @@ class ProductFullResource extends JsonResource
             "added_at"=>$this->created_at,
             'description' =>$this->description,
             'category' => $this->category->category,
-            "sale" => $this->when($this->current_sale ,$this->current_sale?
+            "sale" =>( $this->current_sale?
                 [
                     'price_after_sale'=>$this->current_sale->price_after_sale,
                     'percentage'=>$this->current_sale->sale_percentage,

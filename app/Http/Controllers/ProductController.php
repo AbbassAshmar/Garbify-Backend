@@ -54,7 +54,6 @@ class ProductController extends Controller{
         return $products;
     }
 
-
     private function filterSize($products,$size){
         if($size){
             $products = $products->whereHas("sizes", function($query)use(&$size){
@@ -146,7 +145,7 @@ class ProductController extends Controller{
     }
 
     private function filterSales($products,$sales){
-        if (($sales == 'true' ?true:false)) {
+        if ($sales == 'true') {
             $products = $products->whereHas("sales", function($query){
                  $query->where('starts_at' , '<', (new DateTime())->format('Y-m-d H:i:s') )->where('ends_at' , '>', (new DateTime())->format('Y-m-d H:i:s'));
                 }
@@ -156,7 +155,7 @@ class ProductController extends Controller{
     }
 
     private function filterNewArrivals($products, $new){
-        if (($new == 'true' ?true:false)) {
+        if ($new == 'true') {
             $products = $products->orderBy("created_at","DESC");
         }
         return $products;
@@ -167,11 +166,9 @@ class ProductController extends Controller{
         $products = $this->filterColor($products, $filters['color']);
         $products = $this->filterSize($products,$filters['size']);
         $products = $this->filterCategories($products, $filters['categories']);
-        $products = HelperController::sortCollection($products, $filters['sort_by']);
-        $this->setTotalCount($products->count());  // set $products total count before pagination
-        $products = HelperController::filterNumber($products, $filters['page'],$filters['limit']);
         $products = $this->filterSales($products, $filters['sales']);
         $products = $this->filterNewArrivals($products, $filters['new_arrivals']);
+
         return $products;
     }
 
@@ -186,8 +183,14 @@ class ProductController extends Controller{
         $limit = $request->input("limit");
         $sales = $request->input("sales");
         $new_arrivals = $request->input("new-arrivals");
+        $search = $request->input("q");
         
-        $products=  Product::with(["colors", "sizes","category", "sales","images"]);
+        $products=  Product::with([]);
+
+        if ($search){
+            $products = $products->where('name','like',"%$search%");
+        }
+
         $filters = [
             'sales'=>$sales,
             'new_arrivals' =>$new_arrivals,
@@ -201,14 +204,18 @@ class ProductController extends Controller{
         ];
 
         $products = $this->filterProducts($products,$filters);
-        $products = $products->get();
-        $response = [
-            "products"=>ProductResource::collection($products),
-            "total_count" => $this->total_count,
-            "count" => $products->count()
-        ];
 
-        return response($response, 200);
+        //pagination applied for filter results 
+        $products = HelperController::getCollectionAndCount(
+            $products,
+            $filters["sort_by"],
+            $filters['page'], 
+            $filters['limit'],
+            ProductResource::class
+        );
+
+        return response($products, 200) ;
+    
     }
 
     public function retrieveProduct(Request $request , $id){
@@ -220,12 +227,12 @@ class ProductController extends Controller{
     public function productSize(Request $request , $id){
         $product = Product::find($id);
         if (!$product) return response(['error' => "product not found."],404);
-        return response(['sizes'=>$product->sizes_array],200);
+        return response(['data'=>$product->sizes_array],200);
     }
 
     public function productColor(Request $request ,$id){
         $product = Product::find($id);
         if (!$product) return response(['error' => "product not found."],404);
-        return response(['colors'=>$product->colors_array],200);
+        return response(['data'=>$product->colors_array],200);
     }
 }

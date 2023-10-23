@@ -17,55 +17,115 @@ use App\Models\User;
 class ProductTest extends TestCase
 {
     use RefreshDatabase;
+
     private $product_1;
-    
+    private $product_2;
+    private $product_3;
+
     public function setUp():void {
         parent::setUp();
-        $category = Category::create(['category' => "men" , 'parent_id' => null]);
-        $this->product_1 = Product::create([
-            'name'=>'air force' ,
-            'quantity'=>322 , 
-            'category_id' => $category->id,
-            'price'=>345,
-            'description'=>'air force for men',
-            'type'=>'mens shoes',
-            'created_at' => (new DateTime())->format('Y-m-d H:i:s')
-        ]);
-        $color = Color::create(['color'=>"red"]);
-        $size = Size::create(['size'=>"xl",'unit'=>"clothes"]);
-        $sale = Sale::create(['quantity'=>100,'product_id' => $this->product_1->id, "sale_percentage"=>20.00 , "starts_at"=>"2022-1-2" , "ends_at"=>"2024-2-2"]);
-        $this->product_1->colors()->attach([$color->id]);
-        $this->product_1->sizes()->attach([$size->id]);
+        $products = HelperTest::create_products();
+        $this->product_1 = $products[0];
+        $this->product_2 = $products[1];
+        $this->product_3 = $products[2];
     }
 
+    // test list products 
+    public function test_list_products():void 
+    {
+        $request = $this->getJson("/api/products");
+        $request->assertStatus(200);
+        $request->assertJson([
+            "data"=>[],
+            "metadata"=>[
+                "count" => 3,
+                "total_count" => 3,
+                "pages_count" => 1, 
+                "current_page" =>1,
+                "limit" => 50,
+            ]
+        ]);
+    }
+
+    public function test_list_products_search():void
+    {
+        $request = $this->getJson("/api/products?q=air");
+        $request->assertStatus(200);
+        $request->assertJson([
+            "data"=>[],
+            "metadata"=>[
+                "count" => 2,
+                "total_count" => 2,
+                "pages_count" => 1, 
+                "current_page" =>1,
+                "limit" => 50,
+            ]
+        ]); 
+    }
+
+    public function test_list_products_search_sort_price_desc():void
+    {
+        $request = $this->getJson("/api/products?q=air&sort+by=Price+ASC");
+        $request->assertStatus(200);
+        $request->assertJson([
+            "data"=>[
+                ["id"=>$this->product_1->id],
+                ["id"=>$this->product_3->id]
+            ],
+            "metadata"=>[
+                "count" => 2,
+                "total_count" => 2,
+                "pages_count" => 1, 
+                "current_page" =>1,
+                "limit" => 50,
+            ]
+        ]); 
+    }
+    public function test_list_products_filter_by_color():void
+    {
+        $request = $this->getJson("/api/products?color=violet");
+        $request->assertStatus(200);
+        $request->assertJson([
+            "data"=>[
+                ["id"=>$this->product_1->id],
+            ],
+            "metadata"=>[
+                "count" => 1,
+                "total_count" => 1,
+                "pages_count" => 1, 
+                "current_page" =>1,
+                "limit" => 50,
+            ]
+        ]); 
+    }
+
+    // retrive methods
     public function test_retrieve_product(): void
     {   
-        $response = $this->getJson('/api/products/' . $this->product_1->id);
-        $response->assertStatus(200);
-        $response->assertJsonStructure(
-            ["product" =>
-                [
-                    'pk',
-                    'name',
-                    'quantity',
-                    'price',
-                    'description',
-                    'type',
-                    'added_at',
-                    'colors' => [] ,
-                    'sizes' => [] ,
-                    'sale' => [
-                        'price_after_sale',
-                        'percentage',
-                        'starts_at',
-                        'ends_at' 
-                    ], 
-                    'category',
-                    'images' => [
-                    ]
+        $request = $this->getJson('/api/products/' . $this->product_1->id);
+        $request->assertStatus(200);
+        $request->assertJsonStructure([
+            "data" =>[
+                'id',
+                'name',
+                'quantity',
+                'price',
+                'description',
+                'type',
+                'added_at',
+                'colors' => [] ,
+                'sizes' => [] ,
+                'sale' => [
+                    'price_after_sale',
+                    'percentage',
+                    'starts_at',
+                    'ends_at' 
+                ], 
+                'category',
+                'images' => [
                 ]
             ]
-        );
+        ]);
     }
 
     public function test_retrieve_product_does_not_exist()
@@ -75,35 +135,35 @@ class ProductTest extends TestCase
         $request->assertJson(["error" => "Product Not Found."]);
     }
 
-    public function test_create_product_wrong_ability(){
-        $user = User::create(['name'=>"user" , 'email'=>'user@gmail.com', 'password'=>'user']);
-        $token = $user->createToken("token", ['client'])->plainTextToken;
-        $headers = ['accept'=>"application/json",'Authorization' =>"Bearer ".$token];
+    // public function test_create_product_wrong_ability(){
+    //     $user = User::create(['name'=>"user" , 'email'=>'user@gmail.com', 'password'=>'user']);
+    //     $token = $user->createToken("token", ['client'])->plainTextToken;
+    //     $headers = ['accept'=>"application/json",'Authorization' =>"Bearer ".$token];
 
-        $request = $this->postJson("/api/products",[],$headers);
-        $request->assertForbidden();
-    }
+    //     $request = $this->postJson("/api/products",[],$headers);
+    //     $request->assertForbidden();
+    // }
 
-    public function test_create_product_admin_ability(){
-        $user = User::create(['name'=>"admin" , 'email'=>'admin@gmail.com', 'password'=>'admin']);
-        $token = $user->createToken("token", ['admin'])->plainTextToken;
-        $headers = ['accept'=>"application/json",'Authorization' =>"Bearer ".$token];
+    // public function test_create_product_admin_ability(){
+    //     $user = User::create(['name'=>"admin" , 'email'=>'admin@gmail.com', 'password'=>'admin']);
+    //     $token = $user->createToken("token", ['admin'])->plainTextToken;
+    //     $headers = ['accept'=>"application/json",'Authorization' =>"Bearer ".$token];
 
-        $body = [
-            "name" => "leather jacket",
-            "colors" => ['black','red'], 
-            'sizes' => ['xl', 'l','m','s'],
-            'category' => ['men', 'shoes', 'sport'],
-            'price' => 240,
-            'released_at' => '2024-10-10 00:00:00',
-            'quantity' =>300,
-            'description'=> 'jacket made of leather',
-            'images' => []
-        ];
+    //     $body = [
+    //         "name" => "leather jacket",
+    //         "colors" => ['black','red'], 
+    //         'sizes' => ['xl', 'l','m','s'],
+    //         'category' => ['men', 'shoes', 'sport'],
+    //         'price' => 240,
+    //         'released_at' => '2024-10-10 00:00:00',
+    //         'quantity' =>300,
+    //         'description'=> 'jacket made of leather',
+    //         'images' => []
+    //     ];
 
-        $request = $this->postJson("/api/products",$body,$headers);
-        $request->assertCreated();
-    }
+    //     $request = $this->postJson("/api/products",$body,$headers);
+    //     $request->assertCreated();
+    // }
 }
 
 

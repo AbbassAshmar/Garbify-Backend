@@ -6,19 +6,18 @@ use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\ShippingAddress;
 use App\Models\ShippingMethod;
-use App\Models\Size;
-use App\Models\User;
-use App\Models\Product;
-use App\Models\Category;
-use App\Models\Color;
+use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 use Illuminate\Support\Carbon;
 use Tests\Feature\HelperTest;
+
 class OrderTest extends TestCase
 {
-    use RefreshDatabase;
+    // use RefreshDatabase;
+    use DatabaseMigrations; // to reset all ids too
+    // use DatabaseTransactions;
 
     private $user_1;
     private $user_2;

@@ -5,14 +5,18 @@ use App\Models\Size;
 use App\Models\Color;
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\Sale;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 class HelperTest {
 
+    use RefreshDatabase;
+    
     public static function create_users(){
-        $user_1 = User::create(["id"=>2000,"email"=>"abc@gmail.com", "password"=>"abdc", "name"=>"abc"]);
-        $user_2 = User::create(["id"=>3000,"email"=>"User2@gmail.com", "password"=>"abdc", "name"=>"fjsabcdio"]);
-        $user_3 = User::create(["id"=>4000,"email"=>"user_3@gmail.com", "password"=>"abdc", "name"=>"asiodfj"]);
+        $user_1 = User::create(["email"=>"abc@gmail.com", "password"=>"abdc", "name"=>"abc"]);
+        $user_2 = User::create(["email"=>"User2@gmail.com", "password"=>"abdc", "name"=>"fjsabcdio"]);
+        $user_3 = User::create(["email"=>"user_3@gmail.com", "password"=>"abdc", "name"=>"asiodfj"]);
 
         $token_1 = $user_1->createToken("user_token",['client'],Carbon::now()->addDays(1))->plainTextToken;
         $token_2 = $user_2->createToken("user_token",['client'],Carbon::now()->addDays(1))->plainTextToken;
@@ -48,18 +52,15 @@ class HelperTest {
         return [$category_1, $category_2, $category_3];
     }
     public static function create_products(){
-        // create size
         $size = Size::create(["size" => "M 9 / 3 W", "unit"=>"american"]);
+        $color_1 = Color::create(['color'=>"orange"]);
+        $color_2 = Color::create(['color'=>"violet"]);
 
-        // create color
-        $color = Color::create(['color'=>"orange"]);
-
-        //create category
         $category= Category::create(['category'=>"kids"]);
         
         // create products 
         $product_1 = Product::create([
-            'id' =>2000,
+            // 'id' =>2000,
             'name'=>'air force' ,
             'quantity'=>322 , 
             'category_id' => $category->id,
@@ -69,7 +70,7 @@ class HelperTest {
             'created_at' => Carbon::now()
         ]);
         $product_2 = Product::create([
-            'id' =>3000,
+            // 'id' =>3000,
             'name'=>'Jordan 4' ,
             'quantity'=>322 , 
             'category_id' => $category->id,
@@ -79,7 +80,7 @@ class HelperTest {
             'created_at' => Carbon::now()
         ]);
         $product_3 = Product::create([
-            'id' =>4000,
+            // 'id' =>4000,
             'name'=>'air force 2' ,
             'quantity'=>200, 
             'category_id' => $category->id,
@@ -89,13 +90,21 @@ class HelperTest {
             'created_at' => Carbon::now()
         ]);
 
-        $product_1->colors()->attach([$color->id]);
-        $product_2->colors()->attach([$color->id]);
-        $product_3->colors()->attach([$color->id]);
+        $product_1->colors()->attach([$color_2->id]);
+        $product_2->colors()->attach([$color_1->id]);
+        $product_3->colors()->attach([$color_1->id]);
 
         $product_1->sizes()->attach([$size->id]);
         $product_2->sizes()->attach([$size->id]);
         $product_3->sizes()->attach([$size->id]);
+
+        $sale = Sale::create([
+            'quantity'=>100,
+            'product_id' => $product_1->id, 
+            "sale_percentage"=>20.00 , 
+            "starts_at"=>"2022-1-2" , 
+            "ends_at"=>"2024-2-2"
+        ]);
 
         return [$product_1, $product_2, $product_3];
     }

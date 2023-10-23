@@ -38,6 +38,7 @@ class HelperController extends Controller
         return $return_anonymous;
     }
 
+    //sorting , pagination
     public static function getCollectionAndCount($builder,$sort_by, $page, $limit=50,$resource=null){
         $total_count = $builder->count();
         $sorted_builder = self::sortCollection($builder,$sort_by);

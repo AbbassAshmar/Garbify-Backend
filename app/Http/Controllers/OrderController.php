@@ -31,7 +31,6 @@ class OrderController extends Controller
         }
 
         $response = HelperController::getCollectionAndCount($orders,$sort_by,$page,$limit,OrderResource::class);
-        // $response['data'] = OrderResource::collection($response["data"]);
         
         return response($response,200);
     }
