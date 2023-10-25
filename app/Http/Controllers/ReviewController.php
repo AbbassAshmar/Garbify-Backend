@@ -64,6 +64,19 @@ class ReviewController extends Controller
         return response(['helpful_count'=> $new_likes_count, 'action'=>"added"],200);
     }
 
+    // returns whether a user has created a review of a product or not 
+    function checkIfUserReviewed(Request $request, $product_id){
+        $user = $request->user();
+        
+        $product = Product::find($product_id);
+        if (!$product) return response(['message' => 'product not found.'],400);
+
+        $review = Review::where([["user_id",$user->id] , ["product_id", $product_id]])->first();
+        if (!$review) return response(["reviewed" => false],200);
+
+        return response(['reviewed'=>true], 200);
+    }
+    
     // create a review 
     function createReview(Request $request){
         $validated_data = $request->validate([

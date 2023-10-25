@@ -99,6 +99,23 @@ class ProductTest extends TestCase
         ]); 
     }
 
+    public function test_list_products_search_limited():void
+    {
+        $request = $this->getJson("/api/products?q=air+f&limit=1");
+        $request->assertStatus(200);
+        $request->assertJson([
+            "data"=>[],
+            'metadata'=>[
+                "count"=>1,
+                'total_count'=>2,
+                'pages_count'=>2,
+                "current_page"=>1,
+                "limit"=>1,
+            ]
+        ]);
+    }
+
+
     // retrive methods
     public function test_retrieve_product(): void
     {   

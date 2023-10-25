@@ -60,7 +60,8 @@ Route::post("/webhook", [StripeController::class,"stripeWebhookEventListener"]);
 // Reviews Controller Routes 
 
 Route::get("/products/{product_id}/reviews" , [ReviewController::class, "reviewsByProduct"]);
-Route::get("/products/{product_id}/user/reviews/liked", [ReviewController::class, "likedReviewsByProduct"])->middleware(['auth:sanctum', 'ability:client,super-admin,admin']);
+Route::get("/products/{product_id}/users/user/reviews/liked", [ReviewController::class, "likedReviewsByProduct"])->middleware(['auth:sanctum', 'ability:client,super-admin,admin']);
+Route::get("/products/{product_id}/users/user/reviewed/", [ReviewController::class, "checkIfUserReviewed"])->middleware(['auth:sanctum', 'ability:client,super-admin,admin']);
 Route::post("/reviews/{id}/like", [ReviewController::class , "likeReview"])->middleware(['auth:sanctum']);
 Route::post("/reviews", [ReviewController::class , "createReview"])->middleware(['auth:sanctum']);
 
