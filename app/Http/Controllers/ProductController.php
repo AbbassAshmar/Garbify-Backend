@@ -13,6 +13,7 @@ use Exception;
 use Illuminate\Support\Arr;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use PhpOption\None;
 
 // get() returns a collection with conditions (where() orderBy()..) : returns QuerySet
 // first() returns the first instance                               : returns Object 
@@ -173,7 +174,7 @@ class ProductController extends Controller{
     }
 
     // get all 
-    public function index(Request $request){
+    public function listProducts(Request $request){
         $color = $request->input("color");
         $size = $request->input("size");
         $price = $request->input("price");
@@ -216,6 +217,28 @@ class ProductController extends Controller{
 
         return response($products, 200) ;
     
+    }
+
+    public function listPopularProducts(Request $request){
+        $limit = $request->input("limit");
+        $page= $request->input("page");
+        $search = $request->input("search");
+
+        $products = Product::select("products.*")
+        ->leftJoin("order_details", 'products.id', '=','order_details.product_id')
+        ->join('orders','order_details.order_id','=','orders.id')
+        ->groupBy('products.id')->orderByRaw("sum(order_details.ordered_quantity) DESC");
+
+        //pagination applied for filter results 
+        $products = HelperController::getCollectionAndCount(
+            $products,
+            $limit,
+            $page, 
+            null,
+            ProductResource::class
+        );
+
+        return response($products,200);
     }
 
     public function retrieveProduct(Request $request , $id){

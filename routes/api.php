@@ -44,7 +44,8 @@ Route::group(["middleware"=>["auth:sanctum"]], function(){
 
 // Products Controller Routes 
 
-Route::get("/products", [ProductController::class, "index"]);
+Route::get("/products", [ProductController::class, "listProducts"]);
+Route::get("/products/popular",[ProductController::class, "listPopularProducts"]);
 Route::get("/products/{id}", [ProductController::class, "retrieveProduct"]);
 Route::get("/filters",[FilterController::class, "show"]);
 Route::get("/categories", [NavbarController::class, "show"]);
