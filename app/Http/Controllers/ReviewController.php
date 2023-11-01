@@ -16,6 +16,9 @@ class ReviewController extends Controller
 {
     // returns all reviews of a product 
     function reviewsByProduct(Request $request , $product_id){
+        $user_token =  HelperController::getUserAndToken($request);
+        $current_user = $user_token["user"];
+
         $page = $request->input("page");
         $limit = $request->input('limit');
         $sort_by = $request->input("sort-by") ? $request->input("sort-by") : "helpful_count DESC";
@@ -27,12 +30,21 @@ class ReviewController extends Controller
         $reviews = $product->reviews();
         $average_ratings = floatval($reviews->avg("product_rating"));
 
-        $response = HelperController::getCollectionAndCount($reviews,$sort_by,$page,$limit,ReviewResource::class);
+        $response = HelperController::getCollectionAndCount($reviews,$sort_by,$page,$limit);
+        $response['data'] = ReviewResource::collection_with_user($response['data'], $current_user); 
         $response['metadata']['average_rating'] = $average_ratings;
        
         return response($response, 200);
     }
 
+    function deleteReview(Request $request , $id){
+        // delete a review 
+        // {
+        //     'data' : {"action":"deleted"},
+        //     "metadata" : {'count':"new count" , 'average_ratings':"new average ratings"}
+        // }
+    }
+    
     // returns all liked reviews (ids) by a user of a product 
     function likedReviewsByProduct(Request $request , $product_id) {
         $ids= [];

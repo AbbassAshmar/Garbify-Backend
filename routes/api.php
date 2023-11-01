@@ -34,29 +34,28 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::post("/register",[UserController::class, 'register']);
 Route::post('/login', [UserController::class , 'login']);
 Route::post("/register/admin" ,[UserController::class, "adminRegister"])->middleware(['auth:sanctum', 'ability:super-admin']);
-
-// Route::middleware('token')->post('/logout',[UserController::class, 'logout']);
-
-//needs "accept" header, token has to be in header + has to be valid for the user
-Route::group(["middleware"=>["auth:sanctum"]], function(){
-    Route::post('/logout',[UserController::class, 'logout']);
-});
+Route::post('/logout',[UserController::class, 'logout'])->middleware(['auth:sanctum']);
 
 // Products Controller Routes 
 
 Route::get("/products", [ProductController::class, "listProducts"]);
 Route::get("/products/popular",[ProductController::class, "listPopularProducts"]);
 Route::get("/products/{id}", [ProductController::class, "retrieveProduct"]);
-Route::get("/filters",[FilterController::class, "show"]);
-Route::get("/categories", [NavbarController::class, "show"]);
 Route::get("/products/{id}/colors", [ProductController::class, "productColor"]);
 Route::get("/products/{id}/sizes",[ProductController::class, "productSize"]);
+
+// Filter Controller Routes
+
+Route::get("/filters",[FilterController::class, "show"]);
+
+// Navbar Controller Routes
+
+Route::get("/categories", [NavbarController::class, "show"]);
 
 // Stripe Controller Routes 
 
 Route::post("/create-checkout-session",[StripeController::class, "stripeBase"])->middleware(["auth:sanctum"]);
 Route::post("/webhook", [StripeController::class,"stripeWebhookEventListener"]);
-
 
 // Reviews Controller Routes 
 
@@ -65,7 +64,6 @@ Route::get("/products/{product_id}/users/user/reviews/liked", [ReviewController:
 Route::get("/products/{product_id}/users/user/reviewed/", [ReviewController::class, "checkIfUserReviewed"])->middleware(['auth:sanctum', 'ability:client,super-admin,admin']);
 Route::post("/reviews/{id}/like", [ReviewController::class , "likeReview"])->middleware(['auth:sanctum']);
 Route::post("/reviews", [ReviewController::class , "createReview"])->middleware(['auth:sanctum']);
-
 
 // Order Controller Routes
 

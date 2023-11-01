@@ -76,9 +76,10 @@ class ReviewTest extends TestCase
     {
         $request = $this->getJson("/api/products/" . $this->product_1->id ."/reviews");
         $request->assertStatus(200);
-        $request->assertJsonStructure(
-            ['data' , 'metadata']
-        );
+        $request->assertJsonStructure([
+            'data',
+            'metadata'
+        ]);
         $request->assertJson([
             'metadata'=>[
                 'average_rating'=>2.75,
@@ -89,6 +90,44 @@ class ReviewTest extends TestCase
                 "limit" => 50,
             ]
         ]);
+    }
+    public function test_reviews_by_product_authenticated():void
+    {
+        $headers= ['Authorization' => "Bearer " .$this->token_1];
+        $request = $this->getJson("/api/products/".$this->product_1->id."/reviews",$headers);
+        $request->assertOk();
+        $request->assertJson([
+            'data'=>[
+                ['id'=>$this->review_1->id, 'is_liked_by_current_user' => true],
+                ['id'=>$this->review_2->id, 'is_liked_by_current_user' => true],
+            ],
+            'metadata'=>[
+                "count"=>2,
+                "total_count"=>2,
+                "pages_count" => 1, 
+                "current_page" => 1,
+                "limit" => 50,
+            ]
+        ]);
+    }
+
+    public function test_liked_reviews_by_product_Unauthenticated():void
+    {
+        $headers= [];
+        $request = $this->getJson("/api/products/".$this->product_1->id."/reviews",$headers);
+        $request->assertJson([
+            'data'=>[
+                ['id'=>$this->review_1->id, 'is_liked_by_current_user' => false],
+                ['id'=>$this->review_2->id, 'is_liked_by_current_user' => false],
+            ],
+            'metadata'=>[
+                "count"=>2,
+                "total_count"=>2,
+                "pages_count" => 1, 
+                "current_page" => 1,
+                "limit" => 50,
+            ]
+        ]);    
     }
 
     public function test_reviews_by_product_limit(): void
@@ -192,21 +231,6 @@ class ReviewTest extends TestCase
                 "limit" => 50,
             ]
         ]);
-    }
-
-    public function test_liked_reviews_by_product():void
-    {
-        $headers= ['Authorization' => "Bearer " .$this->token_1];
-        $request = $this->getJson("/api/products/".$this->product_1->id."/user/reviews/liked",$headers);
-        $request->assertOk();
-        $request->assertJson([$this->review_2->id]);
-    }
-
-    public function test_liked_reviews_by_product_Unauthenticated():void
-    {
-        $headers= [];
-        $request = $this->getJson("/api/products/".$this->product_1->id."/user/reviews/liked",$headers);
-        $request->assertUnauthorized();
     }
 
     public function test_like_review():void

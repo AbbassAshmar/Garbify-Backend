@@ -12,7 +12,6 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class FavoritesListController extends Controller
 {
-    const ANONYMOUS_USER_ID = 1;
     
     // creation is done in FavoriteController createFavorite method
 
@@ -35,7 +34,7 @@ class FavoritesListController extends Controller
             $favorites_lists = $favorites_lists->where("name","like","%$search%");
 
         $response_body = HelperController::getCollectionAndCount($favorites_lists,$sort_by, $page, $limit);
-        $response_body['data'] = FavoritesListResource::collection_custom($response_body['data'],$current_user);
+        $response_body['data'] = FavoritesListResource::collection_with_user($response_body['data'],$current_user);
 
         return response($response_body, 200);
     }

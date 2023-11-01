@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Http\Controllers\HelperController;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -49,5 +50,15 @@ class Review extends Model
             array_push($res, $image->image_url);
         }
         return $res;
+    }
+
+    public function IsLikedByCurrentUser($current_user=null){
+        // if no user is logged in or anonymous user ,return false
+        
+        if (!$current_user || $current_user->id == HelperController::getANONYMOUS_USER_ID()){
+            return False;
+        }
+        $liked  = $this->likes()->where("user_id" , $current_user->id)->first();
+        return $liked ? true : false ;
     }
 }
