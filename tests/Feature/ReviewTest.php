@@ -12,18 +12,20 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 use App\Models\User;
+use Carbon\Carbon;
 use Tests\Feature\HelperTest;
 
 class ReviewTest extends TestCase
 {
     use RefreshDatabase;
 
-
+    private $user_1;
     private $review_1;
     private $review_2;
     private $token_1;
     private $token_2;
     private $product_1;
+    private $product_2;
 
     public  function setUp():void{
         parent::setUp();
@@ -32,11 +34,14 @@ class ReviewTest extends TestCase
         $users =HelperTest::create_users();
         $user_1 = $users['users'][0];
         $user_2 = $users['users'][1];
+        $this->user_1 = $user_1;
         $this->token_1 = $users['tokens'][0];
         $this->token_2 = $users['tokens'][1];
 
         // create products
-        $this->product_1 = HelperTest::create_products()[0];
+        $products = HelperTest::create_products();
+        $this->product_1 = $products[0];
+        $this->product_2 = $products[1];
         $color = HelperTest::create_colors()[0];
      
         // create reviews for a product 
@@ -71,7 +76,7 @@ class ReviewTest extends TestCase
         $user_2->liked_reviews()->attach($this->review_1);
     }
 
-    
+    // tests of list reviews 
     public function test_reviews_by_product(): void
     {
         $request = $this->getJson("/api/products/" . $this->product_1->id ."/reviews");
@@ -109,6 +114,98 @@ class ReviewTest extends TestCase
                 "limit" => 50,
             ]
         ]);
+    }
+
+    // test delete reviews 
+    public function test_delete_review():void
+    {
+        $review = Review::create([
+            'created_at' => (new DateTime('2022-09-02'))->format('Y-m-d H:i:s'),
+            'user_height'=> 190,
+            'user_weight' => 80,
+            'user_id' =>$this->user_1->id,
+            'product_id' =>$this->product_2->id,
+            'title'=>"review 3",
+            'text' =>'review 3 text',
+            'helpful_count' =>1,
+            'product_rating'=>3.5,
+        ]);
+
+        $headers= ['Authorization' => "Bearer " .$this->token_1];
+        $request = $this->deleteJson("/api/reivews/"+$review->id , [] , $headers);
+        $request->assertOk();
+        $request->assertJsonStructure([
+            'action' => 'deleted',
+            'metadata'=>[
+                "count",
+                "total_count",
+                "pages_count", 
+                "current_page",
+                "limit",
+                'average_rating',
+            ]
+        ]);
+        $review_deleted = Review::find($review->id);
+        $this->assertNull($review_deleted);
+    }
+
+    public function test_delete_review_by_admin():void
+    {
+        $admin = User::create(["email"=>"admin@gmail.com", "password"=>"admin", "name"=>"admin"]);
+        $admin_token = $admin->createToken("user_token",['admin'],Carbon::now()->addDays(1))->plainTextToken;
+
+        $review = Review::create([
+            'created_at' => (new DateTime('2022-09-02'))->format('Y-m-d H:i:s'),
+            'user_height'=> 190,
+            'user_weight' => 80,
+            'user_id' =>$this->user_1->id,
+            'product_id' =>$this->product_2->id,
+            'title'=>"review 3",
+            'text' =>'review 3 text',
+            'helpful_count' =>1,
+            'product_rating'=>3.5,
+        ]);
+        
+        $headers= ['Authorization' => "Bearer " .$admin_token];
+        $request = $this->deleteJson("/api/reivews/"+$review->id , [] , $headers);
+        $request->assertOk();
+
+        $review_deleted = Review::find($review->id);
+        $this->assertNull($review_deleted);
+    }
+
+    public function test_delete_review_by_other_user():void
+    {
+        $review = Review::create([
+            'created_at' => (new DateTime('2022-09-02'))->format('Y-m-d H:i:s'),
+            'user_height'=> 190,
+            'user_weight' => 80,
+            'user_id' =>$this->user_1->id,
+            'product_id' =>$this->product_2->id,
+            'title'=>"review 3",
+            'text' =>'review 3 text',
+            'helpful_count' =>1,
+            'product_rating'=>3.5,
+        ]);
+
+        $headers= ['Authorization' => "Bearer " .$this->token_2]; // user 2 deleting review of user 1
+        $request = $this->deleteJson("/api/reivews/"+$review->id , [] , $headers);
+        $request->assertForbidden();
+        $request->assertJson([
+            'action'=>'not deleted.',
+            'message' => 'not authorized to delete this review.'
+        ]);
+
+        $review_deleted = Review::find($review->id);
+        $this->assertNotNull($review_deleted);
+    }
+    public function test_delete_review_does_not_exist():void
+    {
+        $headers= ['Authorization' => "Bearer " .$this->token_1];
+        $request = $this->deleteJson("/api/reivews/"+12312 , [] , $headers);
+        $request->assertBadRequest();
+        $request->assertJson(['message'=>'Review does not exist.']);
+        
     }
 
     public function test_liked_reviews_by_product_Unauthenticated():void

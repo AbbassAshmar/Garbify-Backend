@@ -64,6 +64,7 @@ Route::get("/products/{product_id}/users/user/reviews/liked", [ReviewController:
 Route::get("/products/{product_id}/users/user/reviewed/", [ReviewController::class, "checkIfUserReviewed"])->middleware(['auth:sanctum', 'ability:client,super-admin,admin']);
 Route::post("/reviews/{id}/like", [ReviewController::class , "likeReview"])->middleware(['auth:sanctum']);
 Route::post("/reviews", [ReviewController::class , "createReview"])->middleware(['auth:sanctum']);
+Route::delete("/reviews/{id}", [ReviewController::class,"deleteReview"])->middleware(["auth:sanctum",'ability:client,super-admin,admin']);
 
 // Order Controller Routes
 
@@ -82,3 +83,19 @@ Route::post("/favorites_lists/{id}/like",[FavoritesListController::class, "likeF
 Route::post("/favorites_lists/{id}/view",[FavoritesListController::class, "viewFavoritesList"]);
 Route::get('/users/user/favorites_lists',[FavoritesListController::class, "retrieveByUser"])->middleware(["auth:sanctum"]);
 Route::get("/favorites_lists/{id}", [FavoritesListController::class, "retrieveById"]);
+
+Route::patch("/favorites_lists/{id}",[FavoritesListController::class,'updateFavoritesList'])->middleware(['auth:sanctum','ability:client,super-admin,admin']);
+
+// admin :                      
+// update favorites lists 
+// delete reviews 
+// create products
+// delete products 
+
+// super-admin :  
+// register admins                     
+// update favorites lists 
+// delete reviews 
+// create products
+// delete products 
+

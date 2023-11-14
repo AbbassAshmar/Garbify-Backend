@@ -19,7 +19,7 @@ return new class extends Migration
             $table->integer("likes_count",false, true)->default(0);
             $table->foreignId("user_id")->constrained()->onDelete("cascade");
             $table->boolean("public")->default(true);
-
+            $table->string("thumbnail")->nullable();
         });
     }
 

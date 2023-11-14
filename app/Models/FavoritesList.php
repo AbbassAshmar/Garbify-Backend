@@ -13,7 +13,8 @@ class FavoritesList extends Model
 {
     use HasFactory;
     protected $with =["user"];
-    protected $fillable =['name','user_id', 'created_at', 'views_count','likes_count','public'];
+    protected $appends=['thumbnail'];
+    protected $fillable =['name','user_id', 'created_at', 'views_count','likes_count','public','thumbnail'];
     // protected $appends = ["is_liked_by_current_user"];
 
     public function user(){
@@ -40,6 +41,17 @@ class FavoritesList extends Model
         }
         $liked  = $this->likes()->where("user_id" , $current_user->id)->first();
         return $liked ? true : false ;
+    }
+
+    public function getThumbnailAttribute(){
+        if ($this->attributes['thumbnail']){
+            return $this->attributes['thumbnail'];
+        }
+        $products_thumb = $this->favorites()->first()->product->thumbnail;
+        if ($products_thumb){
+            return $products_thumb->image_url;
+        }
+        return null;
     }
  
 }

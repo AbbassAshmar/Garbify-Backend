@@ -89,7 +89,7 @@ class ProductController extends Controller{
         return $resultArr; 
     }
 
-    // [men, shoe, running] returns category named "running" that is a child of shoes that is a child of men
+    // [men, shoe, running] returns category object named "running" that is a child of shoes that is a child of men
     public function getChildByParents(array $categories){
        
         $array_length = count($categories);

@@ -15,6 +15,7 @@ class HelperController extends Controller
     public static function getANONYMOUS_USER_ID(){
         return self::ANONYMOUS_USER_ID;
     }
+    
     public static function getUserAndToken($request){
         $return_anonymous = ['token'=>null,'user'=>User::find(self::ANONYMOUS_USER_ID)];
         $auth_header = $request->header("Authorization");

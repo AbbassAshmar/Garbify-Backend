@@ -39,10 +39,14 @@ class ReviewController extends Controller
 
     function deleteReview(Request $request , $id){
         // delete a review 
-        // {
-        //     'data' : {"action":"deleted"},
-        //     "metadata" : {'count':"new count" , 'average_ratings':"new average ratings"}
-        // }
+        $user = $request->user();
+        $review = Review::find($id);
+        if (!$review){
+            return response(['message'=>"Review does not exist."],400);
+        }
+        if ($user->id != $review->user->id){
+            return response();
+        }
     }
     
     // returns all liked reviews (ids) by a user of a product 
@@ -156,8 +160,9 @@ class ReviewController extends Controller
             foreach($validated_data['images'] as $image){
                 // random name for the image
                 $name = $image->hashName();
-                // store the image in storage/app/public/reviewsImages dir
-                // to access it , use public/storage (storage is a symlink)
+                // store the image in storage/app/public/reviewsImages dir (public/reviewsImages/)
+                // to access it ,use public/storage (storage is a symlink connects public/storage to storage/app/public/reviewsImages)
+                // accessing storage/app/public directly is not allowed (even in url like host/storage/app/public) instead use host/symlink
                 $image->storeAs('public/reviewsImages/',$name);
                 // store image's name in the db
                 $image = ReviewsImage::create(['review_id'=>$review->id,'image_url'=>$name]);

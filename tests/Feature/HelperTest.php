@@ -13,6 +13,18 @@ class HelperTest {
 
     use RefreshDatabase;
     
+    public static function create_admin(){
+        $admin = User::create(["name"=>"admin","email"=>"admin@gmail.com", "password"=>"123321"]);
+        $token_admin = $admin->createToken("admin_token", ["admin"], Carbon::now()->addDays(1))->plainTextToken;
+        return ["token" => $token_admin , "user" => $admin];
+    }
+
+    public static function create_super_admin(){
+        $super_admin = User::create(["name"=>"super-admin","email"=>"super.admin@gmail.com", "password"=>"123321"]);
+        $token_super_admin = $super_admin->createToken("super_admin_token", ["super-admin"], Carbon::now()->addDays(1))->plainTextToken;
+        return ["token" => $token_super_admin , "user" => $super_admin];
+    }
+
     public static function create_users(){
         $user_1 = User::create(["email"=>"abc@gmail.com", "password"=>"abdc", "name"=>"abc"]);
         $user_2 = User::create(["email"=>"User2@gmail.com", "password"=>"abdc", "name"=>"fjsabcdio"]);

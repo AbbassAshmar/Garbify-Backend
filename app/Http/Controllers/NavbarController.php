@@ -11,8 +11,9 @@ class NavbarController extends Controller
     public function show(Request $request){
         $main_categories= Category::where("parent_id", null)->get();
         $main_children = array_map(function($cat){
-            return ["name"=>$cat->category,
-             "children"=>Category::select("category")->where('parent_id',$cat->id)->get()->all()
+            return [
+                "name"=>$cat->category,
+                "children"=>Category::select("category")->where('parent_id',$cat->id)->get()->all()
             ];
         },$main_categories->all());
 

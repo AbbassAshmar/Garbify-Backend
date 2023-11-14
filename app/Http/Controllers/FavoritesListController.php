@@ -102,4 +102,22 @@ class FavoritesListController extends Controller
 
         return response(['views_count'=>$new_count,'action'=>'viewed'],200);
     }
+
+    // update one or more of the fields 
+    public function updateFavoritesList(Request $request, $id){
+        $favorites_list = FavoritesList::find($id);
+        if (!$favorites_list){
+            return response(['message'=>'Favorites list does not exist.'],400);
+        }
+
+        $owner = $favorites_list->user;
+        $user = $request->user();
+        // $user_token= PersonalAccessToken::findToken($request->bearerToken());
+        
+        if (!($owner == $user) && !($user->tokenCan('admin') || $user->tokenCan("admin"))){
+            return response(["message"=>"You do not have permission to update this resource."],403);
+        }
+
+
+    }
 }
