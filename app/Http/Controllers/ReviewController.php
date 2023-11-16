@@ -162,10 +162,11 @@ class ReviewController extends Controller
                 $name = $image->hashName();
                 // store the image in storage/app/public/reviewsImages dir (public/reviewsImages/)
                 // to access it ,use public/storage (storage is a symlink connects public/storage to storage/app/public/reviewsImages)
+                // public directory is the only directory accessible from outside , static files are stored in it 
                 // accessing storage/app/public directly is not allowed (even in url like host/storage/app/public) instead use host/symlink
-                $image->storeAs('public/reviewsImages/',$name);
+                $path = $image->storeAs('public/reviewsImages/',$name);
                 // store image's name in the db
-                $image = ReviewsImage::create(['review_id'=>$review->id,'image_url'=>$name]);
+                $image = ReviewsImage::create(['review_id'=>$review->id,'image_url'=>basename($path)]);
             }
         }
 

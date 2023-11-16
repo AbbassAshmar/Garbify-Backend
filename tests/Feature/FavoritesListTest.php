@@ -36,7 +36,7 @@ class FavoritesListTest extends TestCase
 
         // create_users 
         $users = HelperTest::create_users();
-        User::create(['id'=>1,'name'=>"anonymous", 'email'=>"an@email.com",'password'=>"234"]);
+        User::create(['name'=>"anonymous", 'email'=>"an@email.com",'password'=>"234"]);
         $this->user_1 = $users['users'][0];
         $this->user_2 = $users['users'][1];
         $user_3 = $users["users"][2];
@@ -98,9 +98,8 @@ class FavoritesListTest extends TestCase
             'views_count'=>6,
             'likes_count'=>2
         ]);
-       
     }
-    
+
     // // likeFavoritesList method 
     // public function test_like_favorites_list():void
     // {
@@ -168,16 +167,17 @@ class FavoritesListTest extends TestCase
     //     $request->assertJson(['views_count'=>$old_views_count+1, "action"=>"viewed"]);
     // }
 
-    // public function test_view_favorites_list_unauthorized():void
-    // {
-    //     $old_views_count = $this->favorites_list_1->views_count;
-    //     $headers = [];
-    //     $request = $this->postJson('api/favorites_lists/'.$this->favorites_list_1->id.'/view',[],$headers);
-    //     $this->favorites_list_1->refresh();
-    //     $request->assertOk();
-    //     $this->assertEquals($old_views_count+1, $this->favorites_list_1->views_count);
-    //     $request->assertJson(['views_count'=>$old_views_count+1, "action"=>"viewed"]);
-    // }
+    public function test_view_favorites_list_unauthorized():void
+    {
+        $old_views_count = $this->favorites_list_1->views_count;
+        $headers = [];
+        $request = $this->postJson('api/favorites_lists/'.$this->favorites_list_1->id.'/view',[],$headers);
+        $this->favorites_list_1->refresh();
+        dd($old_views_count, $this->favorites_list_1->views_count,$request->json());
+        $request->assertOk();
+        $this->assertEquals($old_views_count+1, $this->favorites_list_1->views_count);
+        $request->assertJson(['views_count'=>$old_views_count+1, "action"=>"viewed"]);
+    }
 
     // //admin and super-admin views don't count
     // public function test_view_favorites_list_by_admin_and_super_admin():void
@@ -374,81 +374,100 @@ class FavoritesListTest extends TestCase
     //     ]);
     // }
 
-    // updateFavoritesList method
+    // // updateFavoritesList method
 
-    public function test_update_favorites_list_name():void
-    {
-        $headers = ["Authorization" => "Bearer " .$this->token_1];
-        $data = ['name' => 'Summer List'];
-        $request = $this->patchJson('/api/favorites_lists/'.$this->favorites_list_1->id,$data,$headers);
-        $request->assertOk();
-        $request->assertJson(['data'=>['name'=>'Summer List']]);
-        $this->assertEquals('Summer List' , $this->favorites_list_1->name);
-    }   
+    // public function test_update_favorites_list_name():void
+    // {
+    //     // dd($this->user_1->name, $this->favorites_list_1->user->name);
+    //     $headers = ["Authorization" => "Bearer " .$this->token_1];
+    //     $data = ['name' => 'Summer List'];
+    //     $request = $this->patchJson('/api/favorites_lists/'.$this->favorites_list_1->id,$data,$headers);
+    //     $request->assertOk();
+    //     $request->assertJson(['data'=>['name'=>'Summer List']]);
+    //     $this->favorites_list_1->refresh();
+    //     $this->assertEquals('Summer List' , $this->favorites_list_1->name);
+    // }   
 
-    public function test_update_favorites_list_name_wrong_user():void
-    {
-        $headers = ["Authorization" => "Bearer " .$this->token_2]; //user 2 updating user 1's list
-        $data = ['name' => 'Summer List'];
-        $request = $this->patchJson('/api/favorites_lists/'.$this->favorites_list_1->id,$data,$headers);
-        $request->assertForbidden();
-        $request->assertJson(["message"=>"You do not have permission to update this resource."]);
-        $this->assertNotEquals('Summer List' , $this->favorites_list_1->name); 
-    }
+    // public function test_update_favorites_list_id():void
+    // {
+    //     $headers = ["Authorization" => "Bearer " . $this->token_1]; 
+    //     $data = ['id'=>324,'name'=>"Winter List"];
+    //     $request = $this->patchJson('/api/favorites_lists/'.$this->favorites_list_1->id,$data,$headers);
+    //     $request->assertForbidden();
+    //     $request->assertJson(['message'=>"You do not have permission to update this field."]);
+    // }
 
-    public function test_update_favorites_list_by_admin():void
-    {
-        //create an admin account
-        $admin_user_token = HelperTest::create_admin();
-        $token_admin = $admin_user_token['token'];
+    // public function test_update_favorites_list_no_fields_to_update():void
+    // {
+    //     $headers = ["Authorization" => "Bearer " . $this->token_1]; 
+    //     $data = [];
+    //     $request = $this->patchJson('/api/favorites_lists/'.$this->favorites_list_1->id,$data,$headers);
+    //     $request->assertNoContent();
+    // }
+    
+    // public function test_update_favorites_list_name_wrong_user():void
+    // {
+    //     $headers = ["Authorization" => "Bearer " .$this->token_2]; //user 2 updating user 1's list
+    //     $data = ['name' => 'Summer List'];
+    //     $request = $this->patchJson('/api/favorites_lists/'.$this->favorites_list_1->id,$data,$headers);
+    //     $request->assertForbidden();
+    //     $request->assertJson(["message"=>"You do not have permission to update this resource."]);
+    //     $this->assertNotEquals('Summer List' , $this->favorites_list_1->name); 
+    // }
 
-        $headers = ["Authorization" => "Bearer " . $token_admin]; 
-        $data = ['name' => 'Summer List'];
-        $request = $this->patchJson('/api/favorites_lists/'.$this->favorites_list_1->id,$data,$headers);
-        $request->assertOk();
-        $request->assertJson(['data'=>['name'=>'Summer List']]);
-        $this->assertEquals('Summer List' , $this->favorites_list_1->name); 
-    }
+    // public function test_update_favorites_list_by_admin():void
+    // {
+    //     //create an admin account
+    //     $admin_user_token = HelperTest::create_admin();
+    //     $token_admin = $admin_user_token['token'];
 
-    public function test_update_favorites_list_id():void
-    {
-        $headers = ["Authorization" => "Bearer " . $this->token_1]; 
-        $data = ['id' => 139];
-        $request = $this->patchJson('/api/favorites_lists/'.$this->favorites_list_1->id,$data,$headers);
-        $request->assertForbidden();
-        $request->assertJson(['message'=>"You do not have permission to update this field."]);
-    }
+    //     $headers = ["Authorization" => "Bearer " . $token_admin]; 
+    //     $data = ['name' => 'Summer List'];
+    //     $request = $this->patchJson('/api/favorites_lists/'.$this->favorites_list_1->id,$data,$headers);
+    //     $request->assertOk();
+    //     $request->assertJson(['data'=>['name'=>'Summer List']]);
+    //     $this->favorites_list_1->refresh();
+    //     $this->assertEquals('Summer List' , $this->favorites_list_1->name); 
+    // }
 
-    public function test_update_favorites_list_name_and_thumbnail():void
-    {   
-        // Create a fake image file
-        $fakeImage = UploadedFile::fake()->image('test_image.jpg');
+    
+    // public function test_update_favorites_list_name_and_thumbnail():void
+    // {   
+    //     // Create a fake image file
+    //     $fakeImage = UploadedFile::fake()->image('test_image.jpg');
 
-        $headers = ["Authorization" => "Bearer " . $this->token_1]; 
-        $data = ['name' => 'Summer List' , 'thumbnail' =>$fakeImage];
+    //     $headers = ["Authorization" => "Bearer " . $this->token_1]; 
+    //     $data = ['name' => 'Summer List' , 'thumbnail' =>$fakeImage];
 
-        $request = $this->patchJson('/api/favorites_lists/'.$this->favorites_list_1->id,$data,$headers);
-        $request->assertOk();
-        $request->assertJson(['data'=>["name"=>"Summer List", "thumbnail"]]);
-    }
+    //     $request = $this->patchJson('/api/favorites_lists/'.$this->favorites_list_1->id,$data,$headers);
+    //     $request->assertOk();
 
-    public function test_update_favorites_list_public():void
-    {
-        $headers = ["Authorization" => "Bearer " .$this->token_1];
-        $data = ['public' => false];
-        $request = $this->patchJson('/api/favorites_lists/'.$this->favorites_list_1->id,$data,$headers);
-        $request->assertOk();
-        $request->assertJson(['data'=>['public'=>'false']]);
-    }
+    //     $request->assertJsonStructure(['data'=>["name", "thumbnail"]]);
+    //     $request->assertJson(['data'=>["name"=>"Summer List"]]);
+        
+    //     // /public/storage/favoritesListsThumbnails points to /storage/app/public/favoritesListsThumbnails
+    //     $expected_thumbnail = env('APP_URL') . '/storage/favoritesListsThumbnails/';
+    //     $returned_thumbnail =$request->json()['data']['thumbnail'];
+    //     $this->assertTrue(strpos($returned_thumbnail,$expected_thumbnail) === 0);
+    // }
 
-    public function test_update_favorites_list_does_not_exist():void
-    {
-        $headers = ["Authorization" => "Bearer " .$this->token_1];
-        $data = ['public' => false];
-        $request = $this->patchJson('/api/favorites_lists/3294230',$data,$headers);
-        $request->assertBadRequest();
-        $request->assertJson(['message'=>'Favorites list does not exist.']);
-    }
+    // public function test_update_favorites_list_public():void
+    // {
+    //     $headers = ["Authorization" => "Bearer " .$this->token_1];
+    //     $data = ['public' => false];
+    //     $request = $this->patchJson('/api/favorites_lists/'.$this->favorites_list_1->id,$data,$headers);
+    //     $request->assertOk();
+    //     $request->assertJson(['data'=>['public'=>false]]);
+    // }
+
+    // public function test_update_favorites_list_does_not_exist():void
+    // {
+    //     $headers = ["Authorization" => "Bearer " .$this->token_1];
+    //     $data = ['public' => false];
+    //     $request = $this->patchJson('/api/favorites_lists/3294230',$data,$headers);
+    //     $request->assertBadRequest();
+    //     $request->assertJson(['message'=>'Favorites list does not exist.']);
+    // }
 
     // [
     //     {

@@ -15,8 +15,12 @@ class FavoritesList extends Model
     protected $with =["user"];
     protected $appends=['thumbnail'];
     protected $fillable =['name','user_id', 'created_at', 'views_count','likes_count','public','thumbnail'];
+    protected $updatable = ['name','public','thumbnail'];
     // protected $appends = ["is_liked_by_current_user"];
 
+    public function getUpdatable(){
+        return $this->updatable;
+    }
     public function user(){
         return $this->belongsTo(User::class);
     }
