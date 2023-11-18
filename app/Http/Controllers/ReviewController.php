@@ -15,7 +15,7 @@ use Exception;
 class ReviewController extends Controller
 {
     // returns all reviews of a product 
-    function reviewsByProduct(Request $request , $product_id){
+    function listReviewsByProduct(Request $request , $product_id){
         $user_token =  HelperController::getUserAndToken($request);
         $current_user = $user_token["user"];
 
@@ -30,33 +30,53 @@ class ReviewController extends Controller
         $reviews = $product->reviews();
         $average_ratings = floatval($reviews->avg("product_rating"));
 
-        $response = HelperController::getCollectionAndCount($reviews,$sort_by,$page,$limit);
+        $response = HelperController::getCollectionAndCount($reviews,$sort_by,['page'=>$page,'limit'=>$limit]);
         $response['data'] = ReviewResource::collection_with_user($response['data'], $current_user); 
         $response['metadata']['average_rating'] = $average_ratings;
        
         return response($response, 200);
     }
 
-    function deleteReview(Request $request , $id){
-        // delete a review 
+    function deleteReview(Request $request , $id){ 
         $user = $request->user();
         $review = Review::find($id);
+        $product = $review->product;
+        
         if (!$review){
             return response(['message'=>"Review does not exist."],400);
         }
-        if ($user->id != $review->user->id){
-            return response();
+        if ($user->id != $review->user->id && !($user->hasPermission['delete_any_review'])){
+            return response(['message' => 'You do not have permission to delete this review.']);
         }
+
+        $review->delete();
+        $reviews_of_current_product = $product->reviews;
+        $average_ratings = floatval($reviews_of_current_product->avg("product_rating"));
+
+        $metadata = [
+            'average_ratings' => $average_ratings,
+            'total_count'=>$reviews_of_current_product->count()
+        ];
+        $response = HelperController::getSuccessResponse(null,$metadata);
+
+        return response($response,200);
     }
-    
-    // returns all liked reviews (ids) by a user of a product 
-    function likedReviewsByProduct(Request $request , $product_id) {
-        $ids= [];
-        $reviews=$request->user()->liked_reviews()->where("product_id",$product_id)->select("reviews.id")->get()->all();
-        foreach ($reviews as $review){
-            array_push($ids,$review->id);
+
+    // returns whether a user has created a review of a product or not 
+    function checkIfUserReviewed(Request $request, $product_id){
+        $user = $request->user();
+        
+        $product = Product::find($product_id);
+        if (!$product) return response(['message' => 'product not found.'],400);
+
+        $review = Review::where([["user_id",$user->id] , ["product_id", $product_id]])->first();
+        if (!$review) {
+            $response = HelperController::getSuccessResponse(['reviewed'=>false],null);
+            return response($response, 200);
         }
-        return response($ids,200);
+
+        $response = HelperController::getSuccessResponse(['reviewed'=>true],null);
+        return response($response, 200);
     }
  
     // user likes a review of a product
@@ -78,19 +98,6 @@ class ReviewController extends Controller
         $new_likes_count = $review->likes()->count();
         $review->update(['helpful_count'=>$new_likes_count]);
         return response(['helpful_count'=> $new_likes_count, 'action'=>"added"],200);
-    }
-
-    // returns whether a user has created a review of a product or not 
-    function checkIfUserReviewed(Request $request, $product_id){
-        $user = $request->user();
-        
-        $product = Product::find($product_id);
-        if (!$product) return response(['message' => 'product not found.'],400);
-
-        $review = Review::where([["user_id",$user->id] , ["product_id", $product_id]])->first();
-        if (!$review) return response(["reviewed" => false],200);
-
-        return response(['reviewed'=>true], 200);
     }
     
     // create a review 

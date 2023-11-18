@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Models\Favorite;
 use App\Models\FavoritesList;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -25,6 +28,24 @@ use App\Models\FavoritesList;
 |
 */
 
+// create rules 
+$anonymousRole = Role::create(['name' => 'anonymous']);
+$clientRole = Role::create(['name' => 'client']);
+$adminRole = Role::create(['name' => 'admin']);
+$superAdminRole = Role::create(['name' => 'super admin']);
+
+// Create permissions
+$createProductPermission = Permission::create(['name' => 'create_product']);
+$editProductPermission = Permission::create(['name' => 'edit_product']);
+$editFavoritesListPermission= Permission::create(['name' => 'edit_favorites_list']);
+$registerAdminPermission = Permission::create(['name' => 'register_admin']);
+$deleteAnyReviewPermission= Permission::create(['name'=>'delete_any_review']);
+// Sync permissions to roles
+$superAdminRole->syncPermissions([$createProductPermission, $editProductPermission, $registerAdminPermission]);
+$adminRole->syncPermissions([$createProductPermission, $editProductPermission]);
+
+
+
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
@@ -33,7 +54,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::post("/register",[UserController::class, 'register']);
 Route::post('/login', [UserController::class , 'login']);
-Route::post("/register/admin" ,[UserController::class, "adminRegister"])->middleware(['auth:sanctum', 'ability:super-admin']);
+Route::post("/register/admin" ,[UserController::class, "adminRegister"])->middleware(['auth:sanctum','permission:register_admin']);
 Route::post('/logout',[UserController::class, 'logout'])->middleware(['auth:sanctum']);
 
 // Products Controller Routes 
@@ -59,12 +80,11 @@ Route::post("/webhook", [StripeController::class,"stripeWebhookEventListener"]);
 
 // Reviews Controller Routes 
 
-Route::get("/products/{product_id}/reviews" , [ReviewController::class, "reviewsByProduct"]);
-Route::get("/products/{product_id}/users/user/reviews/liked", [ReviewController::class, "likedReviewsByProduct"])->middleware(['auth:sanctum', 'ability:client,super-admin,admin']);
-Route::get("/products/{product_id}/users/user/reviewed/", [ReviewController::class, "checkIfUserReviewed"])->middleware(['auth:sanctum', 'ability:client,super-admin,admin']);
+Route::get("/products/{product_id}/reviews" , [ReviewController::class, "listReviewsByProduct"]);
+Route::get("/products/{product_id}/users/user/reviewed/", [ReviewController::class, "checkIfUserReviewed"])->middleware(['auth:sanctum']);
 Route::post("/reviews/{id}/like", [ReviewController::class , "likeReview"])->middleware(['auth:sanctum']);
 Route::post("/reviews", [ReviewController::class , "createReview"])->middleware(['auth:sanctum']);
-Route::delete("/reviews/{id}", [ReviewController::class,"deleteReview"])->middleware(["auth:sanctum",'ability:client,super-admin,admin']);
+Route::delete("/reviews/{id}", [ReviewController::class,"deleteReview"])->middleware(["auth:sanctum"]);
 
 // Order Controller Routes
 
@@ -84,7 +104,7 @@ Route::post("/favorites_lists/{id}/view",[FavoritesListController::class, "viewF
 Route::get('/users/user/favorites_lists',[FavoritesListController::class, "retrieveByUser"])->middleware(["auth:sanctum"]);
 Route::get("/favorites_lists/{id}", [FavoritesListController::class, "retrieveById"]);
 
-Route::patch("/favorites_lists/{id}",[FavoritesListController::class,'updateFavoritesList'])->middleware(['auth:sanctum','ability:client,super-admin,admin']);
+Route::patch("/favorites_lists/{id}",[FavoritesListController::class,'updateFavoritesList'])->middleware(['auth:sanctum','ability:patch-favorites-lists']);
 
 // admin :                      
 // update favorites lists 

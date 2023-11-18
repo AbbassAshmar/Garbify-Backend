@@ -8,6 +8,57 @@ use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+
+// {
+//     "status": "success",
+//     "error": null,
+//     "data": {
+//         "posts": [
+//             // list of posts 
+//         ]
+//     },
+//     "metadata": []
+// }
+// {
+//     "status": "failed",
+//     "error": {
+//         "code": 123,
+//         "message": ["Failed to like/unlike the post."]
+//     },
+//     "data": null,
+//     "metadata": []
+// }
+// actions like like 
+// {
+//     "status": "success",
+//     "error": null,
+//     "data": {
+//         'action' => 'liked'
+//     },
+//     "metadata": []
+// }
+// {
+//     "status": "success",
+//     "error": null,
+//     "data": {
+//         'action' => 'unliked'
+//     },
+//     "metadata": []
+// }
+// Successful PATCH request
+// {
+//     "status": "success",
+//     "error": null,
+//     "data": {
+//         "post": {
+//             "id": 123,
+//             // Updated fields only
+//             "title": "Updated Title",
+//             "content": "Updated Content"
+//         }
+//     },
+//     "metadata": []
+// }
 class HelperController extends Controller
 {
     public const ANONYMOUS_USER_ID = 1;
@@ -16,6 +67,26 @@ class HelperController extends Controller
         return self::ANONYMOUS_USER_ID;
     }
     
+    public static function getSuccessResponse($data,$metadata){
+        $response= [ 
+            "status" => "success",
+            "error" => null,
+            "data" => $data,
+            "metadata"=> $metadata
+        ];
+        return $response;
+    }
+
+    public static function getFailedResponse($error,$metadata){
+        $response = [
+            "status" => "failed",
+            "error" => $error,
+            "data" => null,
+            "metadata" => $metadata
+        ];
+        return $response;
+    }
+
     public static function getUserAndToken($request){
         $return_anonymous = ['token'=>null,'user'=>User::find(self::ANONYMOUS_USER_ID)];
         $auth_header = $request->header("Authorization");
@@ -32,6 +103,7 @@ class HelperController extends Controller
         if (!$token){
             return $return_anonymous;
         }
+        
         if ($token->tokenable && !(UserController::check_token_expiry($token))){
             return ['token' => $token , 'user' =>$token->tokenable];
         }
@@ -39,28 +111,23 @@ class HelperController extends Controller
         return $return_anonymous;
     }
 
-    //sorting , pagination
-    public static function getCollectionAndCount($builder,$sort_by, $page, $limit=50,$resource=null){
-        $total_count = $builder->count();
+    //applies sorting , pagination 
+    public static function getCollectionAndCount($builder,$sort_by=null,$page_limit=null,$resource=null,$name=null){
+        if (!$page_limit){
+           $page_limit = ['page'=>null,'limit'=>50];
+        }
+
         $sorted_builder = self::sortCollection($builder,$sort_by);
-
-        $limited_sorted_builder = self::filterNumber($sorted_builder, $page,$limit);
+        $limited_sorted_builder = self::filterNumber($sorted_builder, $page_limit['page'],$page_limit['limit']);
         $result = $limited_sorted_builder['builder']->get();
-        $limit = $limited_sorted_builder['limit'];
-        $page = $limited_sorted_builder['page'];
 
-        $count_after_limit = $result->count();
-        $returned_arr = [
-            "data" => $resource ?  $resource::collection($result) : $result,
-            "metadata" => [
-                "count" => $count_after_limit,
-                "total_count" => $total_count,
-                "pages_count" => ceil( $total_count / $limit), 
-                "current_page" => $page,
-                "limit" => (int)$limit,
-            ]
-        ];
+        if ($name){
+            $data =[$name => $resource ?  $resource::collection($result) : $result]; 
+        }else {
+            $data = [ $resource ?  $resource::collection($result) : $result ];
+        }
         
+        $returned_arr = self::getSuccessResponse($data , $limited_sorted_builder['info'] );
         return $returned_arr;
     }
 
@@ -69,8 +136,19 @@ class HelperController extends Controller
         if (!$builder) return $builder;
         if (!$page) $page = 1;
         if (!$limit) $limit = 50;
+        $total_count = $builder->count();
         $builder = $builder->skip(($page-1) * $limit)->take($limit);
-        return ['builder' => $builder, 'limit'=>$limit, 'page' => $page];
+        $result = [
+            'builder' => $builder, 
+            'info'=>[
+                'total_count'=>$total_count,
+                'pages_count' => $page,
+                'current_page'=>$page,
+                'limit'=>$limit, 
+                'count'=>ceil( $total_count / $limit), 
+            ]
+        ];
+        return $result;
     }
 
     public static function sortCollection($collection, $sort_by){

@@ -193,7 +193,7 @@ class ReviewTest extends TestCase
         $request->assertForbidden();
         $request->assertJson([
             'action'=>'not deleted.',
-            'message' => 'not authorized to delete this review.'
+            'message' => 'You do not have permission to delete this review.'
         ]);
 
         $review_deleted = Review::find($review->id);

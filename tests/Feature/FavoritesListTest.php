@@ -173,7 +173,6 @@ class FavoritesListTest extends TestCase
         $headers = [];
         $request = $this->postJson('api/favorites_lists/'.$this->favorites_list_1->id.'/view',[],$headers);
         $this->favorites_list_1->refresh();
-        dd($old_views_count, $this->favorites_list_1->views_count,$request->json());
         $request->assertOk();
         $this->assertEquals($old_views_count+1, $this->favorites_list_1->views_count);
         $request->assertJson(['views_count'=>$old_views_count+1, "action"=>"viewed"]);

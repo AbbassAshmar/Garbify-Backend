@@ -9,12 +9,17 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
+
+    // user_type decides type ; 'admin', 'anonymous' , 'super-admin' , 'client'
+    // user token ability decides abilities like : "delete-prodcut" ... 
+    
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
+            $table->string("user_type")->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();

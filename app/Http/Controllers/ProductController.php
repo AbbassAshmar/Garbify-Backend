@@ -24,8 +24,6 @@ use PhpOption\None;
 
 
 class ProductController extends Controller{
-    protected $total_count;
-
 
     private function priceBetween($products,$price=null){
         if (!$price){
@@ -135,16 +133,6 @@ class ProductController extends Controller{
         return $products;
     }
 
-    // total count : count before pagination
-    public function setTotalCount($count){
-        $this->total_count = $count;
-    }
-
-    public function getTotalCount(){
-        if (!$this->total_count) return 0;
-        return $this->total_count;
-    }
-
     private function filterSales($products,$sales){
         if ($sales == 'true') {
             $products = $products->whereHas("sales", function($query){
@@ -210,13 +198,12 @@ class ProductController extends Controller{
         $products = HelperController::getCollectionAndCount(
             $products,
             $filters["sort_by"],
-            $filters['page'], 
-            $filters['limit'],
-            ProductResource::class
+            ['page'=>$filters['page'],'limit'=>$filters['limit']],
+            ProductResource::class,
+            'products'
         );
 
         return response($products, 200) ;
-    
     }
 
     public function listPopularProducts(Request $request){
@@ -232,10 +219,10 @@ class ProductController extends Controller{
         //pagination applied for filter results 
         $products = HelperController::getCollectionAndCount(
             $products,
-            $limit,
-            $page, 
+            ['page'=>$page,'limit'=>$limit],
             null,
-            ProductResource::class
+            ProductResource::class,
+            'products'
         );
 
         return response($products,200);
@@ -244,18 +231,22 @@ class ProductController extends Controller{
     public function retrieveProduct(Request $request , $id){
         $product = Product::find($id);
         if (!$product) return response(["error" => "Product Not Found."], 404);
-        return (new ProductFullResource($product))->response()->setStatusCode(200);
+        $product_arr = (new ProductFullResource($product))->toArray($request);
+        $response = HelperController::getSuccessResponse(['product'=>$product_arr],null);
+        return response($response, 200);
     }
 
     public function productSize(Request $request , $id){
         $product = Product::find($id);
         if (!$product) return response(['error' => "product not found."],404);
-        return response(['data'=>$product->sizes_array],200);
+        $response = HelperController::getSuccessResponse(['sizes'=>$product->sizes_array],null);
+        return response($response,200);
     }
 
     public function productColor(Request $request ,$id){
         $product = Product::find($id);
         if (!$product) return response(['error' => "product not found."],404);
-        return response(['data'=>$product->colors_array],200);
+        $response = HelperController::getSuccessResponse(['sizes'=>$product->colors_array],null);
+        return response($response,200);   
     }
 }

@@ -9,6 +9,8 @@ use App\Models\Sale;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+
 class HelperTest {
 
     use RefreshDatabase;
@@ -26,6 +28,8 @@ class HelperTest {
     }
 
     public static function create_users(){
+        DB::statement('ALTER TABLE users AUTO_INCREMENT = 2');
+        $anonymous_user = User::create(['id'=>1 ,'email'=>"anonymousUser@anonymous.com", "name"=>'anonymous']);
         $user_1 = User::create(["email"=>"abc@gmail.com", "password"=>"abdc", "name"=>"abc"]);
         $user_2 = User::create(["email"=>"User2@gmail.com", "password"=>"abdc", "name"=>"fjsabcdio"]);
         $user_3 = User::create(["email"=>"user_3@gmail.com", "password"=>"abdc", "name"=>"asiodfj"]);

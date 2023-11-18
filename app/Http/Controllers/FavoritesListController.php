@@ -100,7 +100,7 @@ class FavoritesListController extends Controller
         }
 
         // if unauthenticated, $user is Anonymous_user
-        // dd($user);
+        
         $favorites_list->views()->attach($user);
         $new_count = $favorites_list->views()->count();
         $favorites_list->update(['views_count' => $new_count]);
