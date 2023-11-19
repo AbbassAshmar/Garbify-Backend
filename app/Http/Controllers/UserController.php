@@ -66,12 +66,14 @@ class UserController extends Controller
 
     public function adminRegister(Request $request){
         $new_user = $this->createUser($request);
-        $token = $this->create_token($new_user,['admin']);
-        $response_json = [
+        $new_user->assignRole('admin');
+        $token = $this->create_token($new_user);
+        $body = [
             'token'=>$token->plainTextToken,
             'user'=>$new_user
         ];
-        return response($response_json, 201);
+        $response_body = HelperController::getSuccessResponse($body,null);
+        return response($response_body, 201);
     }
 
 

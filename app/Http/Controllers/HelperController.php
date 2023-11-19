@@ -61,10 +61,19 @@ use Illuminate\Http\Resources\Json\JsonResource;
 // }
 class HelperController extends Controller
 {
-    public const ANONYMOUS_USER_ID = 1;
+    public static function checkIfNotFound($resource,$name){
+        if (!$resource){
+            $error = ["message"=>"$name not found.",'code'=>404];
+            $response_body = HelperController::getFailedResponse($error,null);
+            return response($response_body,404);
+        }
+        return null;
+    }
 
-    public static function getANONYMOUS_USER_ID(){
-        return self::ANONYMOUS_USER_ID;
+    public static function retrieveResource($resource,$name){
+        $data = [$name=>$resource];
+        $response_body = HelperController::getSuccessResponse($data,null);
+        return response($response_body,200);
     }
     
     public static function getSuccessResponse($data,$metadata){
@@ -88,8 +97,10 @@ class HelperController extends Controller
     }
 
     public static function getUserAndToken($request){
-        $return_anonymous = ['token'=>null,'user'=>User::find(self::ANONYMOUS_USER_ID)];
+        $return_anonymous = ['token'=>null,'user'=>User::role('anonymous')->first()];
+
         $auth_header = $request->header("Authorization");
+
         if (!$auth_header){
             return $return_anonymous;
         }

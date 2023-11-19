@@ -40,7 +40,7 @@ class FavoritesList extends Model
     public function IsLikedByCurrentUser($current_user=null){
         // if no user is logged in or anonymous user ,return false
         
-        if (!$current_user || $current_user->id == HelperController::getANONYMOUS_USER_ID()){
+        if (!$current_user || $current_user->hasRole("anonymous")){
             return False;
         }
         $liked  = $this->likes()->where("user_id" , $current_user->id)->first();

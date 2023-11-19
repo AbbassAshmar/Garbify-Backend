@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\HelperController;
 use App\Models\Favorite;
 use App\Models\FavoritesList;
 use App\Models\User;
 use Carbon\Carbon;
+use Database\Seeders\UserRolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -33,7 +35,7 @@ class FavoritesListTest extends TestCase
     public function setUp():void
     {
         parent::setUp();
-
+        $this->seed(UserRolePermissionSeeder::class);
         // create_users 
         $users = HelperTest::create_users();
         User::create(['name'=>"anonymous", 'email'=>"an@email.com",'password'=>"234"]);
@@ -156,16 +158,21 @@ class FavoritesListTest extends TestCase
     //     $request->assertJson(['views_count'=>$old_views_count+1, "action"=>"viewed"]);
     // }
 
-    // public function test_view_favorites_list_again():void
-    // {
-    //     $old_views_count = $this->favorites_list_1->views_count;
-    //     $headers = ['Authorization' => "Bearer ".$this->token_2];
-    //     $request = $this->postJson('api/favorites_lists/'.$this->favorites_list_1->id.'/view',[],$headers);
-    //     $this->favorites_list_1->refresh();
-    //     $request->assertOk();
-    //     $this->assertEquals($old_views_count+1, $this->favorites_list_1->views_count);
-    //     $request->assertJson(['views_count'=>$old_views_count+1, "action"=>"viewed"]);
-    // }
+    public function test_view_favorites_list_again():void
+    {
+        $old_views_count = $this->favorites_list_1->views_count;
+        $headers = ['Authorization' => "Bearer ".$this->token_2];
+        $request = $this->postJson('api/favorites_lists/'.$this->favorites_list_1->id.'/view',[],$headers);
+        $this->favorites_list_1->refresh();
+        $request->assertOk();
+        $this->assertEquals($old_views_count+1, $this->favorites_list_1->views_count);
+        $request->assertJson([
+            "status"=>"success",
+            "error"=>null,
+            "data"=>["action"=>"viewed"],
+            "metadata"=>["views_count"=>$old_views_count+1]
+        ]);
+    }
 
     public function test_view_favorites_list_unauthorized():void
     {
@@ -175,99 +182,144 @@ class FavoritesListTest extends TestCase
         $this->favorites_list_1->refresh();
         $request->assertOk();
         $this->assertEquals($old_views_count+1, $this->favorites_list_1->views_count);
-        $request->assertJson(['views_count'=>$old_views_count+1, "action"=>"viewed"]);
+        $request->assertJson([
+            'status'=>'success',
+            'data'=> [
+                "action"=>"viewed",
+            ],
+            'metadata' => [
+                'views_count'=>$old_views_count+1, 
+            ],
+            'error'=>null
+        ]);
     }
 
-    // //admin and super-admin views don't count
-    // public function test_view_favorites_list_by_admin_and_super_admin():void
-    // {
-    //     //create an admin account
-    //     $admin_user_token = HelperTest::create_admin();
-    //     $admin = $admin_user_token['user'];
-    //     $token_admin = $admin_user_token['token'];
+    //admin and super-admin views don't count
+    public function test_view_favorites_list_by_admin_and_super_admin():void
+    {
+        //create an admin account
+        $admin_user_token = HelperTest::create_admin();
+        $admin = $admin_user_token['user'];
+        $token_admin = $admin_user_token['token'];
     
-    //     //create super admin account
-    //     $admin_user_token = HelperTest::create_super_admin();
-    //     $super_admin = $admin_user_token['user'];
-    //     $token_super_admin =  $admin_user_token['token'];
+        //create super admin account
+        $admin_user_token = HelperTest::create_super_admin();
+        $super_admin = $admin_user_token['user'];
+        $token_super_admin =  $admin_user_token['token'];
     
-    //     //view by admin
-    //     $headers = ["Authorization" => "Bearer " . $token_admin];
-    //     $old_views_count = $this->favorites_list_1->views_count;
+        //view by admin
+        $headers = ["Authorization" => "Bearer " . $token_admin];
+        $old_views_count = $this->favorites_list_1->views_count;
         
-    //     $admin_view = $this->postJson('api/favorites_lists/'.$this->favorites_list_1->id.'/view',[],$headers);
-    //     $admin_view->assertOk();
-    //     $this->favorites_list_1->refresh();
+        $admin_view = $this->postJson('api/favorites_lists/'.$this->favorites_list_1->id.'/view',[],$headers);
+        $admin_view->assertOk();
+        $this->favorites_list_1->refresh();
 
-    //     $admin_view->assertJson(["views_count"=>0 ,"action"=>"viewed"]);
-    //     $this->assertEquals($old_views_count,$this->favorites_list_1->views_count);
+        $this->assertEquals($old_views_count,$this->favorites_list_1->views_count);
+        $admin_view->assertJson([
+            'status'=>'success',
+            'data'=> [
+                "action"=>"viewed",
+            ],
+            'metadata' => [
+                'views_count'=>0, 
+            ],
+            'error'=>null
+        ]);
 
-    //     //view by super-admin
-    //     $headers = ["Authorization" => "Bearer " . $token_super_admin];
-    //     $super_admin_view = $this->postJson('api/favorites_lists/'.$this->favorites_list_1->id.'/view',[],$headers);
-    //     $super_admin_view->assertOk();
-    //     $this->favorites_list_1->refresh();
+        //view by super-admin
+        $headers = ["Authorization" => "Bearer " . $token_super_admin];
+        $super_admin_view = $this->postJson('api/favorites_lists/'.$this->favorites_list_1->id.'/view',[],$headers);
+        $super_admin_view->assertOk();
+        $this->favorites_list_1->refresh();
 
-    //     $super_admin_view->assertJson(["views_count"=>0 ,"action"=>"viewed"]);
-    //     $this->assertEquals($old_views_count,$this->favorites_list_1->views_count);
-    // }
+        $this->assertEquals($old_views_count,$this->favorites_list_1->views_count);
+        $super_admin_view->assertJson([
+            'status'=>'success',
+            'data'=> [
+                "action"=>"viewed",
+            ],
+            'metadata' => [
+                'views_count'=>0 
+            ],
+            'error'=>null
+        ]);
+    }
 
     // // retreiveById method 
 
-    // public function test_retrieve_favorites_list_by_id():void
-    // {
-    //     $request = $this->getJson("api/favorites_lists/". $this->favorites_list_1->id);
-    //     $request->assertOk();
-    //     $request->assertJsonStructure([
-    //         "data"=>[
-    //             "id",
-    //             "name",
-    //             "created_at",
-    //             "views_count",
-    //             "likes_count",
-    //             'public', 
-    //             'user_id', 
-    //             "user",
-    //             'is_liked_by_current_user'
-    //         ]
-    //     ]);
-    // }
+    public function test_retrieve_favorites_list_by_id():void
+    {
+        $request = $this->getJson("api/favorites_lists/". $this->favorites_list_1->id);
+        $request->assertOk();
+        $request->assertJsonStructure([
+            "metadata",
+            'error',
+            'status',
+            "data"=>[
+                'favorites list'=>[
+                    "id",
+                    "name",
+                    "created_at",
+                    "views_count",
+                    "likes_count",
+                    'public', 
+                    'user_id', 
+                    "user",
+                    'is_liked_by_current_user'
+                ]
+            ]
+        ]);
+    }
 
-    // public function test_retrieve_favorites_list_by_id_not_found():void
-    // {
-    //     $request = $this->getJson("api/favorites_lists/"  . 324324);
-    //     $request->assertNotFound();
-    //     $request->assertJson(['message'=>"Favorites list not found."]);
-    // }
+    public function test_retrieve_favorites_list_by_id_not_found():void
+    {
+        $request = $this->getJson("api/favorites_lists/"  . 324324);
+        $request->assertNotFound();
+        $request->assertJson([
+            'status'=>'failed',
+            'data'=> null,
+            'metadata' => null,
+            'error'=>[
+                'message'=>'Favorites list not found.',
+                'code'=>404
+            ]
+        ]);
+    }
 
-    // // retrieveByUser method 
+    // retrieveByUser method 
 
-    // public function test_retrieve_favorites_list_by_user():void
-    // {
-    //     $headers = ["Authorization" => "Bearer " .$this->token_1];
-    //     $request = $this->getJson("api/users/user/favorites_lists",$headers);
-    //     $request->assertOk();
-    //     $request->assertJsonStructure([
-    //         "data"=>[
-    //             "id",
-    //             'name',
-    //             'likes_count',
-    //             'views_count',
-    //             'public',
-    //             'created_at',
-    //             'user_id',
-    //             'is_liked_by_current_user'
-    //         ]
-    //     ]);
-    // }
+    public function test_retrieve_favorites_list_by_user():void
+    {
+        $headers = ["Authorization" => "Bearer " .$this->token_1];
+        $request = $this->getJson("api/users/user/favorites_lists",$headers);
+        $request->assertOk();
+        $request->assertJsonFragment(['id'=>$this->user_1->id]);
+        $request->assertJsonStructure([
+            'metadata',
+            'error',
+            "data"=>[
+                'favorites list'=>[
+                    "id",
+                    'name',
+                    'likes_count',
+                    'views_count',
+                    'public',
+                    'created_at',
+                    'user_id',
+                    'is_liked_by_current_user'
+                ]
+            ]
+        ]);
+    }
 
-    // public function test_retrieve_favorites_list_by_user_unauthenticated():void
-    // {
-    //     $headers =[];
-    //     $request = $this->getJson("api/users/user/favorites_lists", $headers);
-    //     $request->assertUnauthorized();
-    //     $request->assertJson(["message"=>"Unauthenticated."]);
-    // }
+    public function test_retrieve_favorites_list_by_user_unauthenticated():void
+    {
+        $headers =[];
+        $request = $this->getJson("api/users/user/favorites_lists", $headers);
+        $request->assertUnauthorized();
+        $request->assertJson(["message"=>"Unauthenticated."]);
+    }
 
     // // listFavoritesLists method 
 
@@ -459,14 +511,15 @@ class FavoritesListTest extends TestCase
     //     $request->assertJson(['data'=>['public'=>false]]);
     // }
 
-    // public function test_update_favorites_list_does_not_exist():void
-    // {
-    //     $headers = ["Authorization" => "Bearer " .$this->token_1];
-    //     $data = ['public' => false];
-    //     $request = $this->patchJson('/api/favorites_lists/3294230',$data,$headers);
-    //     $request->assertBadRequest();
-    //     $request->assertJson(['message'=>'Favorites list does not exist.']);
-    // }
+    public function test_update_favorites_list_does_not_exist():void
+    {
+        $headers = ["Authorization" => "Bearer " .$this->token_1];
+        $data = ['public' => false];
+        $request = $this->patchJson('/api/favorites_lists/3294230',$data,$headers);
+        //$request->assertNotFound();
+        $error = ['message'=>'Favorites list does not exist.', 'code' => 404];
+        $request->assertJson(HelperController::getFailedResponse($error,null));
+    }
 
     // [
     //     {

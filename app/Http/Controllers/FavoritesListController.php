@@ -40,16 +40,20 @@ class FavoritesListController extends Controller
 
         return response($response_body, 200);
     }
+
+
     
+
     // get favoritesList of a user by token  (user retreives his own favorites list)
     public function retrieveByUser(Request $request){
         $current_user = $request->user();
 
         $favorites_list = FavoritesList::where("user_id" , $current_user->id)->first();
-        if (!$favorites_list) return response(["message"=>"Favorites list not found."],404);
+        $isNull = HelperController::checkIfNotFound($favorites_list,"Favorites list");
+        if ($isNull) return $isNull;
 
         $resource = new FavoritesListResource($favorites_list,null,$current_user);
-        return response(["data" => $resource], 200);
+        return HelperController::retrieveResource($resource,'favorites list');
     }
 
     // get one FavoritesList by id (user retrieves other user's favorites list)
@@ -58,19 +62,21 @@ class FavoritesListController extends Controller
         $current_user = $user_token["user"];
 
         $favorites_list = FavoritesList::with("user")->find($id);
-        if (!$favorites_list) return response(["message"=>"Favorites list not found."],404);
+        $isNull = HelperController::checkIfNotFound($favorites_list,"Favorites list");
+        if ($isNull) return $isNull;
 
         $resource = new FavoritesListResource($favorites_list,null,$current_user);
-        return response(["data" => $resource], 200);
+        return HelperController::retrieveResource($resource,'favorites list');
     }
 
     // like and like remove
     public function likeFavoritesList(Request $request ,$id){
         $user = $request->user();
-        $favorites_list = FavoritesList::find($id);
 
-        if (!$favorites_list) return response(['message'=>'favorites list not found.'],400);
-        
+        $favorites_list = FavoritesList::find($id);
+        $isNull = HelperController::checkIfNotFound($favorites_list,"FavoriteslList");
+        if ($isNull) return $isNull;
+
         $like = $favorites_list->likes()->where("user_id", $user->id)->first();
         if ($like){
             $favorites_list->likes()->detach($user->id);
@@ -88,15 +94,18 @@ class FavoritesListController extends Controller
     // view
     public function viewFavoritesList(Request $request ,$id){
         $favorites_list = FavoritesList::find($id);
-        if (!$favorites_list) return response(['message' =>'favorites list not found'],400);
+        $isNull = HelperController::checkIfNotFound($favorites_list,"Favorites list");
+        if ($isNull) return $isNull;
 
         $user_token = HelperController::getUserAndToken($request);
         $user = $user_token['user'];
-        $token = $user_token['token'];
+        $body  = ["action"=>"viewed"];
 
         // if super-admin or admin view , don't increment number of views
-        if ($token && ($token->can("super-admin") || $token->can("admin"))){
-            return response(["views_count"=>$favorites_list->views_count,"action"=>"viewed"],200);
+        if ($user && $user->hasRole(['admin','super admin'])){
+            $metadata = ["views_count"=>$favorites_list->views_count];
+            $response_body = HelperController::getSuccessResponse($body,$metadata);
+            return response($response_body,200);
         }
 
         // if unauthenticated, $user is Anonymous_user
@@ -105,12 +114,14 @@ class FavoritesListController extends Controller
         $new_count = $favorites_list->views()->count();
         $favorites_list->update(['views_count' => $new_count]);
 
-        return response(['user'=>$user->name,'views_count'=>$new_count,'action'=>'viewed'],200);
+        $metadata = ["views_count"=>$new_count];
+        $response_body = HelperController::getSuccessResponse($body,$metadata);
+
+        return response($response_body,200);
     }
 
     // update one or more of the fields 
     public function updateFavoritesList(Request $request, $id){
-        
         $validated_data = $request->validate([
             "name" => ["bail", "max:30", "string", "unique:App\Models\FavoritesList,name"],
             "thumbnail" => ['bail' , 'max:5000', 'mimes:jpeg,jpg,png','image'],
@@ -120,26 +131,31 @@ class FavoritesListController extends Controller
         ]);
 
         $favorites_list = FavoritesList::find($id);
-        if (!$favorites_list){
-            return response(['message'=>'Favorites list does not exist.'],400);
-        }
+        $isNull = HelperController::checkIfNotFound($favorites_list,"Favorites list");
+        if ($isNull) return $isNull;
 
         // check if user trying to update is the owner or an admin
         $owner = $favorites_list->user;
         $user = $request->user();
-        if ($owner->id != $user->id && !($user->tokenCan('super-admin') || $user->tokenCan("admin"))){
-            return response(["message"=>"You do not have permission to update this resource."],403);
+
+        //move this code to the middleware
+        if ( $owner->id != $user->id && !$user->hasPermission('update_favorites_list') ){
+            $error = ['message'=>"You do not have permission to update this resource.",'code'=>403];
+            $response_body = HelperController::getFailedResponse($error,null);
+            return response($response_body,403);
         }
 
         if (empty($validated_data)){
-            return response([],204);
+            return response(HelperController::getSuccessResponse(null, null),200);
         }
         
-        // check if a requested to update field is not updatable
+        // check if a requested field to be updated is not updatable
         $fields_to_update = array_keys($validated_data);
         $updatable_fields = $favorites_list->getUpdatable();
         if (array_diff($fields_to_update, $updatable_fields) !== []){
-            return response(['message'=>"You do not have permission to update this field."],403);
+            $error = ['message'=>"You do not have permission to update this field.",'code'=>403];
+            $response_body = HelperController::getFailedResponse($error,null);
+            return response($response_body,403);
         }
 
         // if image is present store it at storage/app/public/favoritesListsThumbnails
@@ -159,10 +175,11 @@ class FavoritesListController extends Controller
         }
 
         if ($update){
-            $response_body = ['data'=>$validated_data];
-            return response($response_body,200);
+            return HelperController::retrieveResource($validated_data,"favorites list");
         } 
 
-        return response(['message'=>'Update failed.'],400);
+        $error = ['message'=>'Update failed.', 'code'=>400];
+        $response_body = HelperController::getFailedResponse($error,null);
+        return response($response_body,400);
     }
 }

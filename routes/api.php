@@ -11,11 +11,6 @@ use App\Http\Controllers\StripeController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
-use App\Models\Favorite;
-use App\Models\FavoritesList;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
-
 
 /*
 |--------------------------------------------------------------------------
@@ -27,24 +22,6 @@ use Spatie\Permission\Models\Permission;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
-
-// create rules 
-$anonymousRole = Role::create(['name' => 'anonymous']);
-$clientRole = Role::create(['name' => 'client']);
-$adminRole = Role::create(['name' => 'admin']);
-$superAdminRole = Role::create(['name' => 'super admin']);
-
-// Create permissions
-$createProductPermission = Permission::create(['name' => 'create_product']);
-$editProductPermission = Permission::create(['name' => 'edit_product']);
-$editFavoritesListPermission= Permission::create(['name' => 'edit_favorites_list']);
-$registerAdminPermission = Permission::create(['name' => 'register_admin']);
-$deleteAnyReviewPermission= Permission::create(['name'=>'delete_any_review']);
-// Sync permissions to roles
-$superAdminRole->syncPermissions([$createProductPermission, $editProductPermission, $registerAdminPermission]);
-$adminRole->syncPermissions([$createProductPermission, $editProductPermission]);
-
-
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -104,7 +81,7 @@ Route::post("/favorites_lists/{id}/view",[FavoritesListController::class, "viewF
 Route::get('/users/user/favorites_lists',[FavoritesListController::class, "retrieveByUser"])->middleware(["auth:sanctum"]);
 Route::get("/favorites_lists/{id}", [FavoritesListController::class, "retrieveById"]);
 
-Route::patch("/favorites_lists/{id}",[FavoritesListController::class,'updateFavoritesList'])->middleware(['auth:sanctum','ability:patch-favorites-lists']);
+Route::patch("/favorites_lists/{id}",[FavoritesListController::class,'updateFavoritesList'])->middleware(['auth:sanctum','permission:update_favorites_list']);
 
 // admin :                      
 // update favorites lists 

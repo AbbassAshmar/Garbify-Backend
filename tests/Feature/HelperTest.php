@@ -17,26 +17,35 @@ class HelperTest {
     
     public static function create_admin(){
         $admin = User::create(["name"=>"admin","email"=>"admin@gmail.com", "password"=>"123321"]);
-        $token_admin = $admin->createToken("admin_token", ["admin"], Carbon::now()->addDays(1))->plainTextToken;
+        $token_admin = $admin->createToken("admin_token",[], Carbon::now()->addDays(1))->plainTextToken;
+        $admin->assignRole("admin");
+
         return ["token" => $token_admin , "user" => $admin];
     }
 
     public static function create_super_admin(){
-        $super_admin = User::create(["name"=>"super-admin","email"=>"super.admin@gmail.com", "password"=>"123321"]);
-        $token_super_admin = $super_admin->createToken("super_admin_token", ["super-admin"], Carbon::now()->addDays(1))->plainTextToken;
+        $super_admin = User::create(["name"=>"super admin","email"=>"super.admin@gmail.com", "password"=>"123321"]);
+        $token_super_admin = $super_admin->createToken("super_admin_token",[],Carbon::now()->addDays(1))->plainTextToken;
+        $super_admin->assignRole("super admin");
+
         return ["token" => $token_super_admin , "user" => $super_admin];
     }
 
     public static function create_users(){
-        DB::statement('ALTER TABLE users AUTO_INCREMENT = 2');
-        $anonymous_user = User::create(['id'=>1 ,'email'=>"anonymousUser@anonymous.com", "name"=>'anonymous']);
+        $anonymous_user = User::create(['email'=>"anonymousUser@anonymous.com", "name"=>'anonymous','password'=>"234924ukl"]);
+        $anonymous_user->assignRole("anonymous");
+
         $user_1 = User::create(["email"=>"abc@gmail.com", "password"=>"abdc", "name"=>"abc"]);
         $user_2 = User::create(["email"=>"User2@gmail.com", "password"=>"abdc", "name"=>"fjsabcdio"]);
         $user_3 = User::create(["email"=>"user_3@gmail.com", "password"=>"abdc", "name"=>"asiodfj"]);
 
-        $token_1 = $user_1->createToken("user_token",['client'],Carbon::now()->addDays(1))->plainTextToken;
-        $token_2 = $user_2->createToken("user_token",['client'],Carbon::now()->addDays(1))->plainTextToken;
-        $token_3 = $user_3->createToken("user_token",['client'],Carbon::now()->addDays(1))->plainTextToken;
+        $user_1->assignRole("client");
+        $user_2->assignRole("client");
+        $user_3->assignRole("client");
+
+        $token_1 = $user_1->createToken("user_token",[],Carbon::now()->addDays(1))->plainTextToken;
+        $token_2 = $user_2->createToken("user_token",[],Carbon::now()->addDays(1))->plainTextToken;
+        $token_3 = $user_3->createToken("user_token",[],Carbon::now()->addDays(1))->plainTextToken;
 
         return [
             'users' =>[$user_1,$user_2,$user_3],
