@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Exception;
 use Laravel\Sanctum\PersonalAccessToken;
+use Spatie\Permission\Exceptions\UnauthorizedException;
 
 use function PHPUnit\Framework\isEmpty;
 
@@ -137,12 +138,9 @@ class FavoritesListController extends Controller
         // check if user trying to update is the owner or an admin
         $owner = $favorites_list->user;
         $user = $request->user();
-
-        //move this code to the middleware
-        if ( $owner->id != $user->id && !$user->hasPermission('update_favorites_list') ){
-            $error = ['message'=>"You do not have permission to update this resource.",'code'=>403];
-            $response_body = HelperController::getFailedResponse($error,null);
-            return response($response_body,403);
+        
+        if ( $owner->id != $user->id && !$user->hasPermissionTo('update_favorites_list') ){
+            throw new UnauthorizedException(403,'You do not have the required authorization.');
         }
 
         if (empty($validated_data)){

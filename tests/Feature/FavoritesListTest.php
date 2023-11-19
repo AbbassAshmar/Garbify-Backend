@@ -456,15 +456,23 @@ class FavoritesListTest extends TestCase
     //     $request->assertNoContent();
     // }
     
-    // public function test_update_favorites_list_name_wrong_user():void
-    // {
-    //     $headers = ["Authorization" => "Bearer " .$this->token_2]; //user 2 updating user 1's list
-    //     $data = ['name' => 'Summer List'];
-    //     $request = $this->patchJson('/api/favorites_lists/'.$this->favorites_list_1->id,$data,$headers);
-    //     $request->assertForbidden();
-    //     $request->assertJson(["message"=>"You do not have permission to update this resource."]);
-    //     $this->assertNotEquals('Summer List' , $this->favorites_list_1->name); 
-    // }
+    public function test_update_favorites_list_name_wrong_user():void
+    {
+        $headers = ["Authorization" => "Bearer " .$this->token_2]; //user 2 updating user 1's list
+        $data = ['name' => 'Summer List'];
+        $request = $this->patchJson('/api/favorites_lists/'.$this->favorites_list_1->id,$data,$headers);
+        $request->assertForbidden();
+        $request->assertJson([
+            'status' => 'failed',
+            'body' => null,
+            "error" => [
+                "message" => 'You do not have the required authorization.',
+                'error'=>403
+            ],
+            'metadata'=>null
+        ]);
+        $this->assertNotEquals('Summer List' , $this->favorites_list_1->name); 
+    }
 
     // public function test_update_favorites_list_by_admin():void
     // {
@@ -516,8 +524,8 @@ class FavoritesListTest extends TestCase
         $headers = ["Authorization" => "Bearer " .$this->token_1];
         $data = ['public' => false];
         $request = $this->patchJson('/api/favorites_lists/3294230',$data,$headers);
-        //$request->assertNotFound();
-        $error = ['message'=>'Favorites list does not exist.', 'code' => 404];
+        $request->assertNotFound();
+        $error = ['message'=>'Favorites list not found.', 'code' => 404];
         $request->assertJson(HelperController::getFailedResponse($error,null));
     }
 

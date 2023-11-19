@@ -81,7 +81,7 @@ Route::post("/favorites_lists/{id}/view",[FavoritesListController::class, "viewF
 Route::get('/users/user/favorites_lists',[FavoritesListController::class, "retrieveByUser"])->middleware(["auth:sanctum"]);
 Route::get("/favorites_lists/{id}", [FavoritesListController::class, "retrieveById"]);
 
-Route::patch("/favorites_lists/{id}",[FavoritesListController::class,'updateFavoritesList'])->middleware(['auth:sanctum','permission:update_favorites_list']);
+Route::patch("/favorites_lists/{id}",[FavoritesListController::class,'updateFavoritesList'])->middleware(['auth:sanctum']);
 
 // admin :                      
 // update favorites lists 
