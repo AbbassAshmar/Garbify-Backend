@@ -22,9 +22,7 @@ class FavoritesListController extends Controller
     public function listFavoritesList(Request $request){
         $user_token =  HelperController::getUserAndToken($request);
         $current_user = $user_token["user"];
-    
-        $page = $request->input("page");
-        $limit = $request->input("limit");
+        $pageLimit= ['page'=>$request->input("page"),'limit'=>$request->input("limit")];
         $sort_by = $request->input("sort_by")?$request->input("sort_by"):"most popular";
         $search = $request->input('q');
 
@@ -36,14 +34,19 @@ class FavoritesListController extends Controller
         if ($search) 
             $favorites_lists = $favorites_lists->where("name","like","%$search%");
 
-        $response_body = HelperController::getCollectionAndCount($favorites_lists,$sort_by, $page, $limit);
-        $response_body['data'] = FavoritesListResource::collection_with_user($response_body['data'],$current_user);
+        $response_body = HelperController::getCollectionAndCount(
+            $favorites_lists,
+            $sort_by,$pageLimit,
+            null,
+            'favorites lists'
+        );
+        $response_body['data']['favorites lists'] = FavoritesListResource::collection_with_user(
+            $response_body['data']['favorites lists'],
+            $current_user
+        );
 
         return response($response_body, 200);
     }
-
-
-    
 
     // get favoritesList of a user by token  (user retreives his own favorites list)
     public function retrieveByUser(Request $request){
@@ -70,12 +73,12 @@ class FavoritesListController extends Controller
         return HelperController::retrieveResource($resource,'favorites list');
     }
 
-    // like and like remove
+    // like and unlike 
     public function likeFavoritesList(Request $request ,$id){
         $user = $request->user();
 
         $favorites_list = FavoritesList::find($id);
-        $isNull = HelperController::checkIfNotFound($favorites_list,"FavoriteslList");
+        $isNull = HelperController::checkIfNotFound($favorites_list,"Favorites list");
         if ($isNull) return $isNull;
 
         $like = $favorites_list->likes()->where("user_id", $user->id)->first();
@@ -83,13 +86,19 @@ class FavoritesListController extends Controller
             $favorites_list->likes()->detach($user->id);
             $new_count = $favorites_list->likes()->count();
             $favorites_list->update(["likes_count" => $new_count]);
-            return response(["likes_count" => $new_count,"action"=>"removed"],200);
+
+            $data = ["action" =>"unliked"];
+            $metadata = ['likes_count' => $new_count];
+            return response(HelperController::getSuccessResponse($data,$metadata),200);
         }
 
         $favorites_list->likes()->attach([$user->id]);
         $new_count = $favorites_list->likes()->count();
         $favorites_list->update(["likes_count" => $new_count]);
-        return response(["likes_count" => $new_count,"action"=>"added"],200);
+
+        $data = ["action" =>"liked"];
+        $metadata = ['likes_count' => $new_count];
+        return response(HelperController::getSuccessResponse($data,$metadata),200);
     }
 
     // view
@@ -151,7 +160,7 @@ class FavoritesListController extends Controller
         $fields_to_update = array_keys($validated_data);
         $updatable_fields = $favorites_list->getUpdatable();
         if (array_diff($fields_to_update, $updatable_fields) !== []){
-            $error = ['message'=>"You do not have permission to update this field.",'code'=>403];
+            $error = ['message'=>"You do not have the required authorization.",'code'=>403];
             $response_body = HelperController::getFailedResponse($error,null);
             return response($response_body,403);
         }

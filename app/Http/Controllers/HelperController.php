@@ -147,16 +147,27 @@ class HelperController extends Controller
         if (!$builder) return $builder;
         if (!$page) $page = 1;
         if (!$limit) $limit = 50;
+        $page = intval($page);
+        $limit = intval($limit);
+        $skip =($page - 1) * $limit;
+
+        // paginate and get total_count
         $total_count = $builder->count();
-        $builder = $builder->skip(($page-1) * $limit)->take($limit);
+        $limited_builder = $builder->skip($skip)->take($limit);
+        $pages_count =  ceil( $total_count / $limit);
+
+        // calculate count after pagination 
+        $countAfterPagination = max(0, $total_count - $skip);
+        $countAfterPagination = min($countAfterPagination, $limit);
+
         $result = [
-            'builder' => $builder, 
+            'builder' => $limited_builder, 
             'info'=>[
+                'count'=>$countAfterPagination,
                 'total_count'=>$total_count,
-                'pages_count' => $page,
+                'pages_count' => $pages_count,
                 'current_page'=>$page,
                 'limit'=>$limit, 
-                'count'=>ceil( $total_count / $limit), 
             ]
         ];
         return $result;

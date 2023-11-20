@@ -37,9 +37,8 @@ class FavoritesList extends Model
         return $this->belongsToMany(User::class, "favorites_list_likes","favorites_list_id","user_id");
     }
 
-    public function IsLikedByCurrentUser($current_user=null){
+    public function isLikedByCurrentUser($current_user=null){
         // if no user is logged in or anonymous user ,return false
-        
         if (!$current_user || $current_user->hasRole("anonymous")){
             return False;
         }

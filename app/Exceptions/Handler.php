@@ -2,6 +2,7 @@
 
 namespace App\Exceptions;
 
+use App\Http\Controllers\HelperController;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Throwable;
 use Spatie\Permission\Exceptions\UnauthorizedException;
@@ -28,16 +29,14 @@ class Handler extends ExceptionHandler
             //
         });
 
+        // for splatie permission errors UnauthorizedException
         $this->renderable(function(UnauthorizedException $e, Request $request){
-            return response()->json([
-                'status' => 'failed',
-                'body' => null,
-                "error" => [
-                    "message" => 'You do not have the required authorization.',
-                    'error'=>403
-                ],
-                'metadata'=>null
-            ], 403);
+            $error = [
+                'message'=>'You do not have the required authorization.',
+                'code' => 403
+            ];
+            $response_body = HelperController::getFailedResponse($error,null);
+            return response()->json($response_body, 403);
         });
     }
 
