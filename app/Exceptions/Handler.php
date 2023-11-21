@@ -7,6 +7,8 @@ use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Throwable;
 use Spatie\Permission\Exceptions\UnauthorizedException;
 use Symfony\Component\HttpFoundation\Request;
+
+
 class Handler extends ExceptionHandler
 {
     /**
@@ -36,7 +38,17 @@ class Handler extends ExceptionHandler
                 'code' => 403
             ];
             $response_body = HelperController::getFailedResponse($error,null);
-            return response()->json($response_body, 403);
+            return response($response_body, 403);
+        });
+
+        // for transaction failure exceptions 
+        $this->renderable(function(TransactionFailedException $e, Request $request){
+            $error = [
+                'message' => $e->getMessage(),
+                'code' => 500
+            ];
+            $response_body = HelperController::getFailedResponse($error,null);
+            return response($response_body, 500);
         });
     }
 

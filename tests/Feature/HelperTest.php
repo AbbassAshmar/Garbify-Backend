@@ -13,8 +13,27 @@ use Illuminate\Support\Facades\DB;
 
 class HelperTest {
 
-    use RefreshDatabase;
-    
+    // use RefreshDatabase;
+    public static function getSuccessResponse($data,$metadata){
+        $response= [ 
+            "status" => "success",
+            "error" => null,
+            "data" => $data,
+            "metadata"=> $metadata
+        ];
+        return $response;
+    }
+
+    public static function getFailedResponse($error,$metadata){
+        $response = [
+            "status" => "failed",
+            "error" => $error,
+            "data" => null,
+            "metadata" => $metadata
+        ];
+        return $response;
+    }
+
     public static function create_admin(){
         $admin = User::create(["name"=>"admin","email"=>"admin@gmail.com", "password"=>"123321"]);
         $token_admin = $admin->createToken("admin_token",[], Carbon::now()->addDays(1))->plainTextToken;

@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use Illuminate\Http\Resources\Json\JsonResource;
-
+use App\Exceptions\TransactionFailedException;
 
 // {
 //     "status": "success",
@@ -61,6 +61,18 @@ use Illuminate\Http\Resources\Json\JsonResource;
 // }
 class HelperController extends Controller
 {
+    public static function transaction($callback, $args){
+        try{
+            DB::beginTransaction();
+            $result = $callback(...$args);
+            DB::commit();
+            return $result;
+        }catch(Exception $e){
+            DB::rollBack();
+            throw TransactionFailedException::transactionFailed();
+        }
+    }
+
     public static function checkIfNotFound($resource,$name){
         if (!$resource){
             $error = ["message"=>"$name not found.",'code'=>404];
@@ -188,5 +200,27 @@ class HelperController extends Controller
             $collection->getQuery()->orders=null;
             return $collection;
         }
+    }
+
+    public static function likeOrUnlikeResource($resource ,$user, $field_name){
+        $doAction = function($resource, $user, $field_name){
+            $like = $resource->likes()->where("user_id", $user->id)->first();
+
+            if ($like){
+                $resource->likes()->detach($user->id);
+                $data = ["action" =>"unliked"];
+            }else{
+                $resource->likes()->attach([$user->id]);
+                $data = ["action" =>"liked"];
+            }
+    
+            $new_count = $resource->likes()->count();
+            $resource->update([$field_name => $new_count]);
+            $metadata = [$field_name => $new_count];
+    
+            return response(self::getSuccessResponse($data,$metadata),200);
+        };
+
+        return self::transaction($doAction,[$resource,$user,$field_name]);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\TransactionFailedException;
 use App\Http\Resources\ReviewResource;
 use App\Models\Product;
 use Illuminate\Http\Request;
@@ -11,6 +12,8 @@ use App\Models\Size;
 use App\Models\Color;
 use App\Models\ReviewsImage;
 use Exception;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Exceptions\UnauthorizedException;
 
 class ReviewController extends Controller
 {
@@ -19,46 +22,53 @@ class ReviewController extends Controller
         $user_token =  HelperController::getUserAndToken($request);
         $current_user = $user_token["user"];
 
-        $page = $request->input("page");
-        $limit = $request->input('limit');
+        $pageLimit = ['page'=>$request->input("page"), 'limit'=> $request->input('limit')];
         $sort_by = $request->input("sort-by") ? $request->input("sort-by") : "helpful_count DESC";
+        
         $product = Product::find($product_id);
-
-        if (!$product)
-            return response(["message"=>"Product not found."], 400);
+        $isNull =HelperController::checkIfNotFound($product, "Product");
+        if ($isNull) return $isNull;
 
         $reviews = $product->reviews();
         $average_ratings = floatval($reviews->avg("product_rating"));
 
-        $response = HelperController::getCollectionAndCount($reviews,$sort_by,['page'=>$page,'limit'=>$limit]);
-        $response['data'] = ReviewResource::collection_with_user($response['data'], $current_user); 
+        $response = HelperController::getCollectionAndCount(
+            $reviews,
+            $sort_by,
+            $pageLimit,
+            null,
+            'reviews'
+        );
+        $response['data']['reviews'] = ReviewResource::collection_with_user(
+            $response['data']['reviews'], 
+            $current_user
+        ); 
         $response['metadata']['average_rating'] = $average_ratings;
-       
         return response($response, 200);
     }
 
     function deleteReview(Request $request , $id){ 
         $user = $request->user();
-        $review = Review::find($id);
-        $product = $review->product;
-        
-        if (!$review){
-            return response(['message'=>"Review does not exist."],400);
-        }
-        if ($user->id != $review->user->id && !($user->hasPermission['delete_any_review'])){
-            return response(['message' => 'You do not have permission to delete this review.']);
+        $review = Review::find($id);        
+        $isNull = HelperController::checkIfNotFound($review,"Review");
+        if ($isNull) return $isNull;
+
+        if ($user->id != $review->user->id && ! $user->hasPermissionTo('delete_any_review')){
+            throw new UnauthorizedException(403,'You do not have the required authorization.');
         }
 
+        $product = $review->product;
         $review->delete();
         $reviews_of_current_product = $product->reviews;
+        
         $average_ratings = floatval($reviews_of_current_product->avg("product_rating"));
 
+        $data = ['action'=>'deleted'];
         $metadata = [
             'average_ratings' => $average_ratings,
             'total_count'=>$reviews_of_current_product->count()
         ];
-        $response = HelperController::getSuccessResponse(null,$metadata);
-
+        $response = HelperController::getSuccessResponse($data,$metadata);
         return response($response,200);
     }
 
@@ -78,26 +88,17 @@ class ReviewController extends Controller
         $response = HelperController::getSuccessResponse(['reviewed'=>true],null);
         return response($response, 200);
     }
- 
+
+
     // user likes a review of a product
     function likeReview(Request $request, $id){
         $user = $request->user();
+
         $review = Review::find($id);
+        $isNull = HelperController::checkIfNotFound($review , "Review");
+        if ($isNull) return $isNull;
 
-        if (!$review) return response(["message"=>"Review not found."], 404);
-
-        $check_like_exists = $review->likes()->where("user_id", $user->id)->first();
-        if ($check_like_exists){
-            $review->likes()->detach($user->id); //remove the like
-            $new_likes_count = $review->likes()->count(); //get the new count
-            $review->update(['helpful_count'=>$new_likes_count]); //update the old count
-            return response(['helpful_count'=> $new_likes_count, 'action'=>"removed"],200);
-        }
-
-        $review->likes()->attach([$user->id]);
-        $new_likes_count = $review->likes()->count();
-        $review->update(['helpful_count'=>$new_likes_count]);
-        return response(['helpful_count'=> $new_likes_count, 'action'=>"added"],200);
+        return HelperController::likeOrUnlikeResource($review, $user, 'helpful_count');
     }
     
     // create a review 
@@ -120,7 +121,7 @@ class ReviewController extends Controller
 
         //get the product instance 
         $product =Product::find((int)$validated_data['product_id']);
-        if (!$product) return response(['message'=>'Product not found.'], 404);
+        HelperController::checkIfNotFound($product,"Product ");
         
         // check if the user has a review on the product 
         $review = Review::where([["user_id", $user->id],['product_id',$product->id]])->first();

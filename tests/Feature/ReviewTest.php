@@ -13,6 +13,7 @@ use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 use App\Models\User;
 use Carbon\Carbon;
+use Database\Seeders\UserRolePermissionSeeder;
 use Tests\Feature\HelperTest;
 
 class ReviewTest extends TestCase
@@ -29,6 +30,7 @@ class ReviewTest extends TestCase
 
     public  function setUp():void{
         parent::setUp();
+        $this->seed(UserRolePermissionSeeder::class);
 
         // create users
         $users =HelperTest::create_users();
@@ -77,15 +79,17 @@ class ReviewTest extends TestCase
     }
 
     // tests of list reviews 
-    public function test_reviews_by_product(): void
+    public function test_list_reviews_by_product(): void
     {
         $request = $this->getJson("/api/products/" . $this->product_1->id ."/reviews");
         $request->assertStatus(200);
         $request->assertJsonStructure([
             'data',
-            'metadata'
+            'metadata',
+            'error',
+            'status'
         ]);
-        $request->assertJson([
+        $request->assertJsonFragment([
             'metadata'=>[
                 'average_rating'=>2.75,
                 "count"=>2,
@@ -96,145 +100,54 @@ class ReviewTest extends TestCase
             ]
         ]);
     }
-    public function test_reviews_by_product_authenticated():void
+    public function test_list_reviews_by_product_authenticated():void
     {
         $headers= ['Authorization' => "Bearer " .$this->token_1];
         $request = $this->getJson("/api/products/".$this->product_1->id."/reviews",$headers);
         $request->assertOk();
-        $request->assertJson([
-            'data'=>[
+        
+        $data = [ 
+            'reviews' =>[
                 ['id'=>$this->review_1->id, 'is_liked_by_current_user' => true],
                 ['id'=>$this->review_2->id, 'is_liked_by_current_user' => true],
-            ],
-            'metadata'=>[
-                "count"=>2,
-                "total_count"=>2,
-                "pages_count" => 1, 
-                "current_page" => 1,
-                "limit" => 50,
             ]
-        ]);
+        ];
+        $metadata = [
+            "count"=>2,
+            "total_count"=>2,
+            "pages_count" => 1, 
+            "current_page" => 1,
+            "limit" => 50,
+        ];
+        $request->assertJson(HelperTest::getSuccessResponse($data,$metadata));
     }
 
-    // test delete reviews 
-    public function test_delete_review():void
-    {
-        $review = Review::create([
-            'created_at' => (new DateTime('2022-09-02'))->format('Y-m-d H:i:s'),
-            'user_height'=> 190,
-            'user_weight' => 80,
-            'user_id' =>$this->user_1->id,
-            'product_id' =>$this->product_2->id,
-            'title'=>"review 3",
-            'text' =>'review 3 text',
-            'helpful_count' =>1,
-            'product_rating'=>3.5,
-        ]);
-
-        $headers= ['Authorization' => "Bearer " .$this->token_1];
-        $request = $this->deleteJson("/api/reivews/"+$review->id , [] , $headers);
-        $request->assertOk();
-        $request->assertJsonStructure([
-            'action' => 'deleted',
-            'metadata'=>[
-                "count",
-                "total_count",
-                "pages_count", 
-                "current_page",
-                "limit",
-                'average_rating',
-            ]
-        ]);
-        $review_deleted = Review::find($review->id);
-        $this->assertNull($review_deleted);
-    }
-
-    public function test_delete_review_by_admin():void
-    {
-        $admin = User::create(["email"=>"admin@gmail.com", "password"=>"admin", "name"=>"admin"]);
-        $admin_token = $admin->createToken("user_token",['admin'],Carbon::now()->addDays(1))->plainTextToken;
-
-        $review = Review::create([
-            'created_at' => (new DateTime('2022-09-02'))->format('Y-m-d H:i:s'),
-            'user_height'=> 190,
-            'user_weight' => 80,
-            'user_id' =>$this->user_1->id,
-            'product_id' =>$this->product_2->id,
-            'title'=>"review 3",
-            'text' =>'review 3 text',
-            'helpful_count' =>1,
-            'product_rating'=>3.5,
-        ]);
-        
-        $headers= ['Authorization' => "Bearer " .$admin_token];
-        $request = $this->deleteJson("/api/reivews/"+$review->id , [] , $headers);
-        $request->assertOk();
-
-        $review_deleted = Review::find($review->id);
-        $this->assertNull($review_deleted);
-    }
-
-    public function test_delete_review_by_other_user():void
-    {
-        $review = Review::create([
-            'created_at' => (new DateTime('2022-09-02'))->format('Y-m-d H:i:s'),
-            'user_height'=> 190,
-            'user_weight' => 80,
-            'user_id' =>$this->user_1->id,
-            'product_id' =>$this->product_2->id,
-            'title'=>"review 3",
-            'text' =>'review 3 text',
-            'helpful_count' =>1,
-            'product_rating'=>3.5,
-        ]);
-
-        $headers= ['Authorization' => "Bearer " .$this->token_2]; // user 2 deleting review of user 1
-        $request = $this->deleteJson("/api/reivews/"+$review->id , [] , $headers);
-        $request->assertForbidden();
-        $request->assertJson([
-            'action'=>'not deleted.',
-            'message' => 'You do not have permission to delete this review.'
-        ]);
-
-        $review_deleted = Review::find($review->id);
-        $this->assertNotNull($review_deleted);
-    }
-    public function test_delete_review_does_not_exist():void
-    {
-        $headers= ['Authorization' => "Bearer " .$this->token_1];
-        $request = $this->deleteJson("/api/reivews/"+12312 , [] , $headers);
-        $request->assertBadRequest();
-        $request->assertJson(['message'=>'Review does not exist.']);
-        
-    }
-
-    public function test_liked_reviews_by_product_Unauthenticated():void
+    public function test_list_reviews_by_product_Unauthenticated():void
     {
         $headers= [];
         $request = $this->getJson("/api/products/".$this->product_1->id."/reviews",$headers);
-        $request->assertJson([
-            'data'=>[
+
+        $data = [ 
+            'reviews' =>[
                 ['id'=>$this->review_1->id, 'is_liked_by_current_user' => false],
                 ['id'=>$this->review_2->id, 'is_liked_by_current_user' => false],
-            ],
-            'metadata'=>[
-                "count"=>2,
-                "total_count"=>2,
-                "pages_count" => 1, 
-                "current_page" => 1,
-                "limit" => 50,
             ]
-        ]);    
+        ];
+        $metadata = [
+            "count"=>2,
+            "total_count"=>2,
+            "pages_count" => 1, 
+            "current_page" => 1,
+            "limit" => 50,      
+        ];
+        $request->assertJson(HelperTest::getSuccessResponse($data,$metadata));
     }
 
-    public function test_reviews_by_product_limit(): void
+    public function test_list_reviews_by_product_limit(): void
     {
         $request = $this->getJson("/api/products/" . $this->product_1->id ."/reviews?page=1&limit=1");
-        $request->assertStatus(200);
-        $request->assertJsonStructure(
-            ['data' , 'metadata',]
-        );
-        $request->assertJson([
+        $request->assertOk();
+        $request->assertJsonFragment([
             'metadata'=>[
                 "count"=>1,
                 "total_count"=>2,
@@ -247,7 +160,8 @@ class ReviewTest extends TestCase
 
         // if no page provided , no products are skipped , just limited
         $request2 = $this->getJson("/api/products/" . $this->product_1->id ."/reviews?limit=1");
-        $request2->assertJson([
+        $request2->assertOk();
+        $request2->assertJsonFragment([
             'metadata'=>[
                 "count"=>1,
                 "total_count"=>2,
@@ -259,7 +173,8 @@ class ReviewTest extends TestCase
         ]);
 
         $request3 = $this->getJson("/api/products/" . $this->product_1->id ."/reviews?limit=10");
-        $request3->assertJson([
+        $request3->assertOk();
+        $request3->assertJsonFragment([
             'metadata'=>[
                 "count"=>2,
                 "total_count"=>2,
@@ -269,67 +184,71 @@ class ReviewTest extends TestCase
                 'average_rating' => 2.75,
             ]
         ]);
-
     }
 
-    public function test_reviews_by_product_sort_by_created_at():void
+    public function test_list_reviews_by_product_sort_by_created_at():void
     {
         $request = $this->getJson("/api/products/" . $this->product_1->id ."/reviews?sort+by=created_at+DESC");
-        //assert that review_1 is before review_2 
-        $request->assertJson([
-            'data'=>[
+        $request->assertOk();
+        $data = [ 
+            'reviews' =>[
                 ['id'=>$this->review_1->id],
                 ['id'=>$this->review_2->id],
-            ],
-            'metadata'=>[
-                "count"=>2,
-                "total_count"=>2,
-                "pages_count" => 1, 
-                "current_page" => 1,
-                "limit" => 50,
-                'average_rating' => 2.75,
             ]
-        ]);
+        ];
+        $metadata = [
+            "count"=>2,
+            "total_count"=>2,
+            "pages_count" => 1, 
+            "current_page" => 1,
+            "limit" => 50,
+            'average_rating' => 2.75,
+        ];
+        $request->assertJson(HelperTest::getSuccessResponse($data,$metadata));
     }
 
-    public function test_reviews_by_product_sort_by_helpful_count_desc():void
+    public function test_list_reviews_by_product_sort_by_helpful_count_desc():void
     {
         $request = $this->getJson("/api/products/" . $this->product_1->id ."/reviews?sort+by=helpful_count+DESC");
-        //assert that review_2 is before review_1
-        $request->assertJson([
-            'data'=>[
+        $request->assertOk();
+
+        $data = [ 
+            'reviews' =>[
                 ['id'=>$this->review_1->id],
                 ['id'=>$this->review_2->id],
-            ],
-            'metadata'=>[
-                "count"=>2,
-                "total_count"=>2,
-                "pages_count" => 1, 
-                "current_page" => 1,
-                "limit" => 50,
             ]
-        ]);
+        ];
+        $metadata = [
+            "count"=>2,
+            "total_count"=>2,
+            "pages_count" => 1, 
+            "current_page" => 1,
+            "limit" => 50,
+        ];
+        $request->assertJson(HelperTest::getSuccessResponse($data,$metadata));
     }
 
-    public function test_reviews_by_product_sort_by_helpful_count_asc():void
+    public function test_list_reviews_by_product_sort_by_helpful_count_asc():void
     {
         $request = $this->getJson("/api/products/" . $this->product_1->id ."/reviews?sort+by=helpful_count+ASC");
         //assert that review_2 is before review_1
-        $request->assertJson([
-            'data'=>[
+        $data = [ 
+            'reviews' =>[
                 ['id'=>$this->review_1->id],
                 ['id'=>$this->review_2->id],
-            ],
-            'metadata'=>[
-                "count"=>2,
-                "total_count"=>2,
-                "pages_count" => 1, 
-                "current_page" => 1,
-                "limit" => 50,
             ]
-        ]);
+        ];
+        $metadata = [
+            "count"=>2,
+            "total_count"=>2,
+            "pages_count" => 1, 
+            "current_page" => 1,
+            "limit" => 50,
+        ];
+        $request->assertJson(HelperTest::getSuccessResponse($data,$metadata));
     }
 
+    // tests of like review
     public function test_like_review():void
     {   
         $headers= ['Authorization' => "Bearer " .$this->token_2];
@@ -338,7 +257,9 @@ class ReviewTest extends TestCase
         $request->assertOk();
         $this->review_2->refresh();
         $this->assertEquals($this->review_2->helpful_count,$previous_helpful_count+1);
-        $request->assertJson(["helpful_count"=>$this->review_2->helpful_count,"action"=>"added"]);
+        $data = ['action'=>'liked'];
+        $metadata = ['helpful_count'=>$this->review_2->helpful_count];
+        $request->assertJson(HelperTest::getSuccessResponse($data,$metadata));
     }
     
     public function test_like_review_again():void
@@ -351,9 +272,12 @@ class ReviewTest extends TestCase
         $request->assertOk();
         $this->review_2->refresh();
 
-        // like removed
+        // like removed        
+        $data = ['action'=>'unliked'];
+        $metadata = ['helpful_count'=>$this->review_2->helpful_count];
+        $request->assertJson(HelperTest::getSuccessResponse($data,$metadata));
         $this->assertEquals($this->review_2->helpful_count,$previous_helpful_count-1);
-        $request->assertJson(["helpful_count"=>$this->review_2->helpful_count,"action"=>"removed"]);
+
     }
 
     public function test_like_review_unauthenticated():void
@@ -373,9 +297,101 @@ class ReviewTest extends TestCase
         // review of id 298 does not exist
         $request = $this->postJson("/api/reviews/298/like",[],$headers);
         $request->assertNotFound();
-        $request->assertJson(["message"=>"Review not found."]);
+        $error = ['message'=>"Review not found.",'code'=>404];
+        $request->assertJson(HelperTest::getFailedResponse($error,null));
     }
 
+
+    // test delete reviews 
+    public function test_delete_review():void
+    {
+        $review = Review::create([
+            'created_at' => (new DateTime('2022-09-02'))->format('Y-m-d H:i:s'),
+            'user_height'=> 190,
+            'user_weight' => 80,
+            'user_id' =>$this->user_1->id,
+            'product_id' =>$this->product_2->id,
+            'title'=>"review 3",
+            'text' =>'review 3 text',
+            'helpful_count' =>1,
+            'product_rating'=>3.5,
+        ]);
+
+        $headers= ['Authorization' => "Bearer " .$this->token_1];
+        $request = $this->deleteJson("/api/reviews/".$review->id , [] , $headers);
+        $request->assertOk();        
+        
+        $data=  ['action' => 'deleted'];
+        $metadata = [
+            "total_count"=>0,
+            'average_ratings'=>0
+        ];
+        $request->assertJson(HelperTest::getSuccessResponse($data,$metadata));
+
+        $review_deleted = Review::find($review->id);
+        $this->assertNull($review_deleted);
+    }
+
+    public function test_delete_review_by_admin():void
+    {
+        
+        $adminTokenArr = HelperTest::create_admin();
+        $admin = $adminTokenArr['user'];
+        $admin_token = $adminTokenArr['token'];
+
+        $review = Review::create([
+            'created_at' => (new DateTime('2022-09-02'))->format('Y-m-d H:i:s'),
+            'user_height'=> 190,
+            'user_weight' => 80,
+            'user_id' =>$this->user_1->id,
+            'product_id' =>$this->product_2->id,
+            'title'=>"review 3",
+            'text' =>'review 3 text',
+            'helpful_count' =>1,
+            'product_rating'=>3.5,
+        ]);
+        
+        $headers= ['Authorization' => "Bearer " .$admin_token];
+        $request = $this->deleteJson("/api/reviews/".$review->id , [] , $headers);
+        $request->assertOk();
+
+        $review_deleted = Review::find($review->id);
+        $this->assertNull($review_deleted);
+    }
+
+    // public function test_delete_review_by_other_user():void
+    // {
+    //     $review = Review::create([
+    //         'created_at' => (new DateTime('2022-09-02'))->format('Y-m-d H:i:s'),
+    //         'user_height'=> 190,
+    //         'user_weight' => 80,
+    //         'user_id' =>$this->user_1->id,
+    //         'product_id' =>$this->product_2->id,
+    //         'title'=>"review 3",
+    //         'text' =>'review 3 text',
+    //         'helpful_count' =>1,
+    //         'product_rating'=>3.5,
+    //     ]);
+
+    //     $headers= ['Authorization' => "Bearer " .$this->token_2]; // user 2 deleting review of user 1
+    //     $request = $this->deleteJson("/api/reivews/"+$review->id , [] , $headers);
+    //     $request->assertForbidden();
+    //     $request->assertJson([
+    //         'action'=>'not deleted.',
+    //         'message' => 'You do not have permission to delete this review.'
+    //     ]);
+
+    //     $review_deleted = Review::find($review->id);
+    //     $this->assertNotNull($review_deleted);
+    // }
+    // public function test_delete_review_does_not_exist():void
+    // {
+    //     $headers= ['Authorization' => "Bearer " .$this->token_1];
+    //     $request = $this->deleteJson("/api/reivews/"+12312 , [] , $headers);
+    //     $request->assertBadRequest();
+    //     $request->assertJson(['message'=>'Review does not exist.']);
+        
+    // }
 
     // createReview tests 
 

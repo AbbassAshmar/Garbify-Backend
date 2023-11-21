@@ -26,7 +26,7 @@ class UserRolePermissionSeeder extends Seeder
         $updateFavoritesListPermission= Permission::create(['name' => 'update_favorites_list']);
         $registerAdminPermission = Permission::create(['name' => 'register_admin']);
         $deleteAnyReviewPermission= Permission::create(['name'=>'delete_any_review']);
-        
+
         // Sync permissions to roles
         $superAdminRole->syncPermissions([
             $createProductPermission, 

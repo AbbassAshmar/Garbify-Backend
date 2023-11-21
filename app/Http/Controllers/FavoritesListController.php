@@ -8,6 +8,7 @@ use App\Models\FavoritesList;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Exception;
+use Illuminate\Database\QueryException;
 use Laravel\Sanctum\PersonalAccessToken;
 use Spatie\Permission\Exceptions\UnauthorizedException;
 
@@ -81,24 +82,7 @@ class FavoritesListController extends Controller
         $isNull = HelperController::checkIfNotFound($favorites_list,"Favorites list");
         if ($isNull) return $isNull;
 
-        $like = $favorites_list->likes()->where("user_id", $user->id)->first();
-        if ($like){
-            $favorites_list->likes()->detach($user->id);
-            $new_count = $favorites_list->likes()->count();
-            $favorites_list->update(["likes_count" => $new_count]);
-
-            $data = ["action" =>"unliked"];
-            $metadata = ['likes_count' => $new_count];
-            return response(HelperController::getSuccessResponse($data,$metadata),200);
-        }
-
-        $favorites_list->likes()->attach([$user->id]);
-        $new_count = $favorites_list->likes()->count();
-        $favorites_list->update(["likes_count" => $new_count]);
-
-        $data = ["action" =>"liked"];
-        $metadata = ['likes_count' => $new_count];
-        return response(HelperController::getSuccessResponse($data,$metadata),200);
+        return HelperController::likeOrUnlikeResource($favorites_list, $user, 'likes_count');
     }
 
     // view
