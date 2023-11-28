@@ -12,6 +12,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 use App\Models\User;
+use PHPUnit\TextUI\Help;
+
 //setUpBeforeClass : once for all test cases before setUp
 //setUp : once before every test case
 class ProductTest extends TestCase
@@ -35,8 +37,7 @@ class ProductTest extends TestCase
     {
         $request = $this->getJson("/api/products");
         $request->assertStatus(200);
-        $request->assertJson([
-            "data"=>[],
+        $request->assertJsonFragment([
             "metadata"=>[
                 "count" => 3,
                 "total_count" => 3,
@@ -50,9 +51,8 @@ class ProductTest extends TestCase
     public function test_list_products_search():void
     {
         $request = $this->getJson("/api/products?q=air");
-        $request->assertStatus(200);
-        $request->assertJson([
-            "data"=>[],
+        $request->assertOk();
+        $request->assertJsonFragment([
             "metadata"=>[
                 "count" => 2,
                 "total_count" => 2,
@@ -67,44 +67,47 @@ class ProductTest extends TestCase
     {
         $request = $this->getJson("/api/products?q=air&sort+by=Price+ASC");
         $request->assertStatus(200);
-        $request->assertJson([
-            "data"=>[
+        $data = [
+            "products"=>[
                 ["id"=>$this->product_1->id],
                 ["id"=>$this->product_3->id]
             ],
-            "metadata"=>[
-                "count" => 2,
-                "total_count" => 2,
-                "pages_count" => 1, 
-                "current_page" =>1,
-                "limit" => 50,
-            ]
-        ]); 
+        ];
+        $metadata = [
+            "count" => 2,
+            "total_count" => 2,
+            "pages_count" => 1, 
+            "current_page" =>1,
+            "limit" => 50,
+        ];
+        $response_body = HelperTest::getSuccessResponse($data,$metadata);
+        $request->assertJson($response_body);
     }
     public function test_list_products_filter_by_color():void
     {
         $request = $this->getJson("/api/products?color=violet");
         $request->assertStatus(200);
-        $request->assertJson([
-            "data"=>[
+        $data = [
+            'products' =>[
                 ["id"=>$this->product_1->id],
-            ],
-            "metadata"=>[
-                "count" => 1,
-                "total_count" => 1,
-                "pages_count" => 1, 
-                "current_page" =>1,
-                "limit" => 50,
             ]
-        ]); 
+        ];
+        $metadata = [
+            "count" => 1,
+            "total_count" => 1,
+            "pages_count" => 1, 
+            "current_page" =>1,
+            "limit" => 50,
+        ];
+        $response_body = HelperTest::getSuccessResponse($data,$metadata);
+        $request->assertJson($response_body);
     }
 
     public function test_list_products_search_limited():void
     {
         $request = $this->getJson("/api/products?q=air+f&limit=1");
-        $request->assertStatus(200);
-        $request->assertJson([
-            "data"=>[],
+        $request->assertOk();
+        $request->assertJsonFragment([
             'metadata'=>[
                 "count"=>1,
                 'total_count'=>2,
@@ -122,24 +125,29 @@ class ProductTest extends TestCase
         $request = $this->getJson('/api/products/' . $this->product_1->id);
         $request->assertStatus(200);
         $request->assertJsonStructure([
+            'metadata',
+            'status',
+            'error',
             "data" =>[
-                'id',
-                'name',
-                'quantity',
-                'price',
-                'description',
-                'type',
-                'added_at',
-                'colors' => [] ,
-                'sizes' => [] ,
-                'sale' => [
-                    'price_after_sale',
-                    'percentage',
-                    'starts_at',
-                    'ends_at' 
-                ], 
-                'category',
-                'images' => [
+                'product'=>[
+                    'id',
+                    'name',
+                    'quantity',
+                    'price',
+                    'description',
+                    'type',
+                    'added_at',
+                    'colors' => [] ,
+                    'sizes' => [] ,
+                    'sale' => [
+                        'price_after_sale',
+                        'percentage',
+                        'starts_at',
+                        'ends_at' 
+                    ], 
+                    'category',
+                    'images' => [
+                    ]
                 ]
             ]
         ]);
@@ -148,13 +156,12 @@ class ProductTest extends TestCase
     public function test_retrieve_product_does_not_exist()
     {
         $request  = $this->getJson("/api/products/" . ($this->product_1->id + 349));
-        $request->assertStatus(404);
-        $request->assertJson(["error" => "Product Not Found."]);
+        $request->assertNotFound();
     }
 
     // public function test_create_product_wrong_ability(){
     //     $user = User::create(['name'=>"user" , 'email'=>'user@gmail.com', 'password'=>'user']);
-    //     $token = $user->createToken("token", ['client'])->plainTextToken;
+    //     $token = $user->createToken("token",[])->plainTextToken;
     //     $headers = ['accept'=>"application/json",'Authorization' =>"Bearer ".$token];
 
     //     $request = $this->postJson("/api/products",[],$headers);
@@ -162,10 +169,11 @@ class ProductTest extends TestCase
     // }
 
     // public function test_create_product_admin_ability(){
-    //     $user = User::create(['name'=>"admin" , 'email'=>'admin@gmail.com', 'password'=>'admin']);
-    //     $token = $user->createToken("token", ['admin'])->plainTextToken;
-    //     $headers = ['accept'=>"application/json",'Authorization' =>"Bearer ".$token];
+    //     $adminTokenArr = HelperTest::create_admin();
+    //     $admin = $adminTokenArr['user'];
+    //     $admin_token = $adminTokenArr['token'];
 
+    //     $headers = ['accept'=>"application/json",'Authorization' =>"Bearer ".$admin_token];
     //     $body = [
     //         "name" => "leather jacket",
     //         "colors" => ['black','red'], 

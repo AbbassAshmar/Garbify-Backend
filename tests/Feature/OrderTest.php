@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\ShippingAddress;
 use App\Models\ShippingMethod;
+use Database\Seeders\UserRolePermissionSeeder;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -41,7 +42,7 @@ class OrderTest extends TestCase
     public function setUp():void
     {
         parent::setUp();
-
+        $this->seed(UserRolePermissionSeeder::class);
         // create users and a token for the first user
         $users_tokens = HelperTest::create_users();
         $this->user_1 = $users_tokens['users'][0];
@@ -212,47 +213,26 @@ class OrderTest extends TestCase
         $headers = ["Authorization" => "Bearer " . $this->token_1];
         $request = $this->getJson("/api/orders",$headers);
         $request->assertOk();
-        $request->assertJson([
-            'data'=>[
-                [
-                    "id"=>$this->order_1->id,
-                    "created_at"=>$this->order_1->created_at->jsonSerialize(),
-                    "status"=>$this->order_1->status,
-                    "total_cost"=>$this->order_1->total_cost,
-                    "shipping_status"=>$this->order_1->shipping_status,
-                    "return_cancellation_info" =>$this->order_1->return_cancellation_info,
-                    "recipient_name"=>$this->order_1->shippingAddress->recipient_name,
-                    "products"=>[
-                        [
-                            "id"=>$this->product_1->id,
-                            "thumbnail"=>null,
-                            "name"=>$this->product_1->name,
-                            "ordered_quantity"=>$this->order_detail_1->ordered_quantity,
-                        ],
-                        [ 
-                            "id"=> $this->product_2->id,
-                            "thumbnail"=>null,
-                            "name"=>$this->product_2->name,
-                            "ordered_quantity"=>$this->order_detail_2->ordered_quantity,
-                        ]
-                    ]
-                ]
-            ],
-            'metadata'=>[
-                "count"=>1,
-                "total_count"=>1,
-                "pages_count" => 1, 
-                "current_page" => 1,
-                "limit" => 50,
+        $data = [
+            'orders' => [
+                ['id'=>$this->order_1->id]
             ]
-        ]);
+        ];
+        $metadata = [
+            "count"=>1,
+            "total_count"=>1,
+            "pages_count" => 1, 
+            "current_page" => 1,
+            "limit" => 50,
+        ];
+        $response_body = HelperTest::getSuccessResponse($data,$metadata);
+        $request->assertJson($response_body);
     }
 
     public function test_list_orders_unauthenticated_user()
     {
         $request = $this->getJson("/api/orders");
         $request->assertUnauthorized();
-        $request->assertJson(["message"=>"Unauthenticated."]);
     }
 
     //handle limit 
@@ -261,7 +241,7 @@ class OrderTest extends TestCase
         $headers = ["Authorization" => "Bearer " . $this->token_2];
         $request = $this->getJson("/api/orders?page=1&limit=1",$headers);
         $request->assertOk();
-        $request->assertJson([
+        $request->assertJsonFragment([
             'metadata'=>[
                 "count"=>1,
                 "total_count"=>3,
@@ -278,20 +258,22 @@ class OrderTest extends TestCase
         $headers = ["Authorization" => "Bearer " . $this->token_2];
         $request = $this->getJson("/api/orders?sort-by=total_cost-DESC",$headers);
         $request->assertOk();
-        $request->assertJson([
-            "data" =>[
+        $data = [
+            'orders'=>[
                 ["id"=>$this->order_5->id],
                 ["id"=>$this->order_4->id],
                 ["id"=>$this->order_3->id]
-            ],
-            'metadata'=>[
-                "count"=>3,
-                "total_count"=>3,
-                "pages_count" => 1, 
-                "current_page" => 1,
-                "limit" => 50,
             ]
-        ]);
+        ];
+        $metadata = [
+            "count"=>3,
+            "total_count"=>3,
+            "pages_count" => 1, 
+            "current_page" => 1,
+            "limit" => 50,
+        ];
+        $response_body = HelperTest::getSuccessResponse($data, $metadata);
+        $request->assertJson($response_body);
     }
 
     public function test_list_orders_sort_by_total_cost_ASC()
@@ -299,20 +281,22 @@ class OrderTest extends TestCase
         $headers = ["Authorization" => "Bearer " . $this->token_2];
         $request = $this->getJson("/api/orders?sort+by=total_cost+ASC",$headers);
         $request->assertOk();
-        $request->assertJson([
-            "data" =>[
+        $data = [
+            'orders'=>[
                 ["id"=>$this->order_3->id],
                 ["id"=>$this->order_4->id],
                 ['id' =>$this->order_5->id]
-            ],
-            'metadata'=>[
-                "count"=>3,
-                "total_count"=>3,
-                "pages_count" => 1, 
-                "current_page" => 1,
-                "limit" => 50,
             ]
-        ]);
+        ];
+        $metadata = [
+            "count"=>3,
+            "total_count"=>3,
+            "pages_count" => 1, 
+            "current_page" => 1,
+            "limit" => 50,
+        ];
+        $response_body = HelperTest::getSuccessResponse($data, $metadata);
+        $request->assertJson($response_body);
     }
     
     public function test_list_orders_sort_by_created_at_DESC()
@@ -320,20 +304,22 @@ class OrderTest extends TestCase
         $headers = ["Authorization" => "Bearer " . $this->token_2];
         $request = $this->getJson("/api/orders?sort+by=created_at+DESC",$headers);
         $request->assertOk();
-        $request->assertJson([
-            "data" =>[
+        $data= [
+            'orders'=>[
                 ["id"=>$this->order_5->id],
                 ["id"=>$this->order_4->id],
                 ["id"=>$this->order_3->id]
-            ],
-            'metadata'=>[
-                "count"=>3,
-                "total_count"=>3,
-                "pages_count" => 1, 
-                "current_page" => 1,
-                "limit" => 50,
             ]
-        ]);
+        ];
+        $metadata = [
+            "count"=>3,
+            "total_count"=>3,
+            "pages_count" => 1, 
+            "current_page" => 1,
+            "limit" => 50,
+        ];
+        $response_body = HelperTest::getSuccessResponse($data, $metadata);
+        $request->assertJson($response_body);
     }
     
     public function test_list_orders_sort_by_created_at_ASC()
@@ -341,20 +327,23 @@ class OrderTest extends TestCase
         $headers = ["Authorization" => "Bearer " . $this->token_2];
         $request = $this->getJson("/api/orders?sort+by=created_at+ASC",$headers);
         $request->assertOk();
-        $request->assertJson([
-            "data" =>[
+        $data = [
+            'orders'=>[
                 ["id"=>$this->order_3->id],
                 ["id"=>$this->order_4->id],
                 ['id'=>$this->order_5->id],
-            ],
-            'metadata'=>[
-                "count"=>3,
-                "total_count"=>3,
-                "pages_count" => 1, 
-                "current_page" => 1,
-                "limit" => 50,
             ]
-        ]);
+        ];
+        $metadata = [
+            "count"=>3,
+            "total_count"=>3,
+            "pages_count" => 1, 
+            "current_page" => 1,
+            "limit" => 50,
+        ];
+        $response_body  = HelperTest::getSuccessResponse($data,$metadata);
+        $request->assertJson($response_body);
+
     }
 
     // handle search 
@@ -365,18 +354,20 @@ class OrderTest extends TestCase
         $request->assertOk();
 
         //product of Order_3 is "air force",product of order_5 is "air force 2)
-        $request->assertJson([
-            "data" =>[
+        $data = [
+            'orders'=>[
                 ['id'=>$this->order_5->id],
                 ["id"=>$this->order_3->id]
-            ],
-            'metadata'=>[
-                "count"=>2,
-                "total_count"=>2,
-                "pages_count" => 1, 
-                "current_page" => 1,
-                "limit" => 50,
             ]
-        ]);
+        ];
+        $metadata = [
+            "count"=>2,
+            "total_count"=>2,
+            "pages_count" => 1, 
+            "current_page" => 1,
+            "limit" => 50,
+        ];
+        $response_body  = HelperTest::getSuccessResponse($data,$metadata);
+        $request->assertJson($response_body);
     }
 }

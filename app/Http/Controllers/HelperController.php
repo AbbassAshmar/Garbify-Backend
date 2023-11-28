@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Http\Controllers;
+
+use App\Exceptions\ResourceNotFoundException;
 use Laravel\Sanctum\PersonalAccessToken;
 use Exception;
 use Illuminate\Http\Request;
@@ -75,9 +77,7 @@ class HelperController extends Controller
 
     public static function checkIfNotFound($resource,$name){
         if (!$resource){
-            $error = ["message"=>"$name not found.",'code'=>404];
-            $response_body = HelperController::getFailedResponse($error,null);
-            return response($response_body,404);
+            throw ResourceNotFoundException::notFound($name);
         }
         return null;
     }
@@ -110,7 +110,6 @@ class HelperController extends Controller
 
     public static function getUserAndToken($request){
         $return_anonymous = ['token'=>null,'user'=>User::role('anonymous')->first()];
-
         $auth_header = $request->header("Authorization");
 
         if (!$auth_header){

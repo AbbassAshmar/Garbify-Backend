@@ -230,7 +230,7 @@ class ProductController extends Controller{
 
     public function retrieveProduct(Request $request , $id){
         $product = Product::find($id);
-        if (!$product) return response(["error" => "Product Not Found."], 404);
+        HelperController::checkIfNotFound($product, 'Product');
         $product_arr = (new ProductFullResource($product))->toArray($request);
         $response = HelperController::getSuccessResponse(['product'=>$product_arr],null);
         return response($response, 200);
@@ -238,14 +238,14 @@ class ProductController extends Controller{
 
     public function productSize(Request $request , $id){
         $product = Product::find($id);
-        if (!$product) return response(['error' => "product not found."],404);
+        HelperController::checkIfNotFound($product, 'Product');
         $response = HelperController::getSuccessResponse(['sizes'=>$product->sizes_array],null);
         return response($response,200);
     }
 
     public function productColor(Request $request ,$id){
         $product = Product::find($id);
-        if (!$product) return response(['error' => "product not found."],404);
+        HelperController::checkIfNotFound($product, 'Product');
         $response = HelperController::getSuccessResponse(['sizes'=>$product->colors_array],null);
         return response($response,200);   
     }

@@ -54,8 +54,7 @@ class FavoritesListController extends Controller
         $current_user = $request->user();
 
         $favorites_list = FavoritesList::where("user_id" , $current_user->id)->first();
-        $isNull = HelperController::checkIfNotFound($favorites_list,"Favorites list");
-        if ($isNull) return $isNull;
+        HelperController::checkIfNotFound($favorites_list,"Favorites list");
 
         $resource = new FavoritesListResource($favorites_list,null,$current_user);
         return HelperController::retrieveResource($resource,'favorites list');
@@ -67,9 +66,8 @@ class FavoritesListController extends Controller
         $current_user = $user_token["user"];
 
         $favorites_list = FavoritesList::with("user")->find($id);
-        $isNull = HelperController::checkIfNotFound($favorites_list,"Favorites list");
-        if ($isNull) return $isNull;
-
+        HelperController::checkIfNotFound($favorites_list,"Favorites list");
+        
         $resource = new FavoritesListResource($favorites_list,null,$current_user);
         return HelperController::retrieveResource($resource,'favorites list');
     }
@@ -77,19 +75,15 @@ class FavoritesListController extends Controller
     // like and unlike 
     public function likeFavoritesList(Request $request ,$id){
         $user = $request->user();
-
         $favorites_list = FavoritesList::find($id);
-        $isNull = HelperController::checkIfNotFound($favorites_list,"Favorites list");
-        if ($isNull) return $isNull;
-
+        HelperController::checkIfNotFound($favorites_list,"Favorites list");
         return HelperController::likeOrUnlikeResource($favorites_list, $user, 'likes_count');
     }
 
     // view
     public function viewFavoritesList(Request $request ,$id){
         $favorites_list = FavoritesList::find($id);
-        $isNull = HelperController::checkIfNotFound($favorites_list,"Favorites list");
-        if ($isNull) return $isNull;
+        HelperController::checkIfNotFound($favorites_list,"Favorites list");
 
         $user_token = HelperController::getUserAndToken($request);
         $user = $user_token['user'];
@@ -120,13 +114,19 @@ class FavoritesListController extends Controller
             "name" => ["bail", "max:30", "string", "unique:App\Models\FavoritesList,name"],
             "thumbnail" => ['bail' , 'max:5000', 'mimes:jpeg,jpg,png','image'],
             'public' => ['bail', 'boolean'],
-            'id' => ['sometimes'],
-            'createdAt' => ['sometimes']
+            'id' => ['prohibited'],
+            'createdAt' => ['prohibited'],
+            'views_count' => ['prohibited'],
+            'likes_count' => ['prohibited'],
+        ],[
+            'id.prohibited'=>"You do not have the required authorization to update this field.",
+            'createdAt.prohibited'=>"You do not have the required authorization to update this field.", 
+            'views_count.prohibited'=>"You do not have the required authorization to update this field.", 
+            'likes_count.prohibited'=>"You do not have the required authorization to update this field.", 
         ]);
 
         $favorites_list = FavoritesList::find($id);
-        $isNull = HelperController::checkIfNotFound($favorites_list,"Favorites list");
-        if ($isNull) return $isNull;
+        HelperController::checkIfNotFound($favorites_list,"Favorites list");
 
         // check if user trying to update is the owner or an admin
         $owner = $favorites_list->user;
@@ -140,15 +140,6 @@ class FavoritesListController extends Controller
             return response(HelperController::getSuccessResponse(null, null),200);
         }
         
-        // check if a requested field to be updated is not updatable
-        $fields_to_update = array_keys($validated_data);
-        $updatable_fields = $favorites_list->getUpdatable();
-        if (array_diff($fields_to_update, $updatable_fields) !== []){
-            $error = ['message'=>"You do not have the required authorization.",'code'=>403];
-            $response_body = HelperController::getFailedResponse($error,null);
-            return response($response_body,403);
-        }
-
         // if image is present store it at storage/app/public/favoritesListsThumbnails
         // to retrieve it use asset(/public/storage/favoritesListsThumbnails, $name_from_db) asset(symlink,$name)
         if (isset($validated_data['thumbnail'])){

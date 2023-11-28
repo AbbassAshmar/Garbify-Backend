@@ -33,6 +33,7 @@ Route::post("/register",[UserController::class, 'register']);
 Route::post('/login', [UserController::class , 'login']);
 Route::post("/register/admin" ,[UserController::class, "adminRegister"])->middleware(['auth:sanctum','permission:register_admin']);
 Route::post('/logout',[UserController::class, 'logout'])->middleware(['auth:sanctum']);
+Route::patch("/users/{id}", [UserController::class,'updateUser'])->middleware(['auth:sanctum']);
 
 // Products Controller Routes 
 

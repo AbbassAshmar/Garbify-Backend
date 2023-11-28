@@ -26,9 +26,8 @@ class ReviewController extends Controller
         $sort_by = $request->input("sort-by") ? $request->input("sort-by") : "helpful_count DESC";
         
         $product = Product::find($product_id);
-        $isNull =HelperController::checkIfNotFound($product, "Product");
-        if ($isNull) return $isNull;
-
+        HelperController::checkIfNotFound($product, "Product");
+        
         $reviews = $product->reviews();
         $average_ratings = floatval($reviews->avg("product_rating"));
 
@@ -50,9 +49,8 @@ class ReviewController extends Controller
     function deleteReview(Request $request , $id){ 
         $user = $request->user();
         $review = Review::find($id);        
-        $isNull = HelperController::checkIfNotFound($review,"Review");
-        if ($isNull) return $isNull;
-
+        HelperController::checkIfNotFound($review,"Review");
+        
         if ($user->id != $review->user->id && ! $user->hasPermissionTo('delete_any_review')){
             throw new UnauthorizedException(403,'You do not have the required authorization.');
         }
@@ -93,11 +91,8 @@ class ReviewController extends Controller
     // user likes a review of a product
     function likeReview(Request $request, $id){
         $user = $request->user();
-
         $review = Review::find($id);
-        $isNull = HelperController::checkIfNotFound($review , "Review");
-        if ($isNull) return $isNull;
-
+        HelperController::checkIfNotFound($review , "Review");
         return HelperController::likeOrUnlikeResource($review, $user, 'helpful_count');
     }
     

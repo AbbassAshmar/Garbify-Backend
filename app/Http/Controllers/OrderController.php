@@ -13,8 +13,7 @@ class OrderController extends Controller
 {
     // listByToken
     public function listOrders(Request $request){
-        $page = $request->input("page");
-        $limit = $request->input("limit");
+        $pageLimt =['page'=> $request->input("page"),'limit'=>$request->input("limit")];
         $sort_by = $request->input("sort_by")?$request->input("sort_by"):"created_at DESC";
         $search = $request->input("q");
 
@@ -30,7 +29,13 @@ class OrderController extends Controller
               ->where("products.name" , 'like' ,"%$search%");
         }
 
-        $response = HelperController::getCollectionAndCount($orders,$sort_by,$page,$limit,OrderResource::class);
+        $response = HelperController::getCollectionAndCount(
+            $orders,
+            $sort_by,
+            $pageLimt,
+            OrderResource::class,
+            "orders"
+        );
         
         return response($response,200);
     }

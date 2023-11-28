@@ -425,12 +425,18 @@ class FavoritesListTest extends TestCase
         $headers = ["Authorization" => "Bearer " . $this->token_1]; 
         $data = ['id'=>324,'name'=>"Winter List"];
         $request = $this->patchJson('/api/favorites_lists/'.$this->favorites_list_1->id,$data,$headers);
-        $request->assertForbidden();
+        $request->assertBadRequest();
         $error = [
-            "message" => 'You do not have the required authorization.',
-            'code'=>403
+            "message"=>"Validation error.",
+            "code" => 400,
+            "details"=> [
+                "id"=> [
+                    "You do not have the required authorization to update this field."
+                ]
+            ]
         ];
-        $request->assertJson(HelperTest::getFailedResponse($error,null));
+        $metadata  = ["error_fields"=>['id']];
+        $request->assertJson(HelperTest::getFailedResponse($error,$metadata));
         $this->assertNotEquals('Summer List' , $this->favorites_list_1->name); 
     }
 

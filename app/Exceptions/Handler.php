@@ -7,7 +7,7 @@ use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Throwable;
 use Spatie\Permission\Exceptions\UnauthorizedException;
 use Symfony\Component\HttpFoundation\Request;
-
+use Illuminate\Validation\ValidationException;
 
 class Handler extends ExceptionHandler
 {
@@ -31,7 +31,34 @@ class Handler extends ExceptionHandler
             //
         });
 
-        // for splatie permission errors UnauthorizedException
+        // for validation failure 
+        $this->renderable(function(ValidationException $e, Request $request){
+            $errors = $e->errors();
+            $fields = array_keys($errors);
+            $error = [
+                'message' => 'Validation error.',
+                'code' => 400,
+                'details' => $errors
+            ];
+        
+            //remove "" from validation
+            foreach($error['details'] as $key=>$arr){
+                for ($i=0 ; $i<count($arr); $i++){
+                    if ($arr[$i] === ""){
+                        unset($arr[$i]);
+                    }
+                }
+                if (count($arr) == 0 ){
+                    unset($error['details'][$key]);
+                }
+            }
+
+            $metadata = ['error_fields' => $fields];
+            $response_body = HelperController::getFailedResponse($error,$metadata);
+            return response($response_body, 400);
+        });
+
+        // for splatije permission errors UnauthorizedException
         $this->renderable(function(UnauthorizedException $e, Request $request){
             $error = [
                 'message'=>'You do not have the required authorization.',
@@ -50,6 +77,19 @@ class Handler extends ExceptionHandler
             $response_body = HelperController::getFailedResponse($error,null);
             return response($response_body, 500);
         });
+
+        // for transaction failure exceptions 
+        $this->renderable(function(ResourceNotFoundException $e, Request $request){
+            $error = [
+                "message"=>$e->getMessage(),
+                'code'=>404
+            ];
+            $response_body = HelperController::getFailedResponse($error,null);
+            return response($response_body,404);
+        });
+
+
+
     }
 
     

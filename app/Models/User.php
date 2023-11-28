@@ -66,8 +66,8 @@ class User extends Authenticatable
         return $this->hasMany(ShippingAddress::class);
     }
 
-    public function favoritesLists(){
-        return $this->hasMany(FavoritesList::class);
+    public function favoritesList(){
+        return $this->hasOne(FavoritesList::class);
     }
 
     public function viewedFavoritesLists(){
