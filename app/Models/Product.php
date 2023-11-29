@@ -12,10 +12,16 @@ class Product extends Model
     protected $appends =[
         'thumbnail'
     ];
-    protected $fillable = ['category_id' , 'name', 'created_at', 'price', 'description', 'type', 'quantity'];
-    // protected $with= ["category","colors","sizes"];
-    // protected $appends=["colors_array",'sizes_array','price_after_sale'];
-    // protected $hidden=['colors'];
+    protected $fillable = [
+        'category_id' , 
+        'name', 
+        'created_at',
+        'price', 
+        'description', 
+        'type', 
+        'quantity'
+    ];
+ 
 
      /**
     * Product is child in the relationship 
@@ -54,7 +60,11 @@ class Product extends Model
     }
 
     public function getThumbnailAttribute(){
-        return $this->images()->where("is_thumbnail",true)->first();
+        $thumbnail=  $this->images()->where("is_thumbnail",true)->first();
+        if (!$thumbnail){
+            $thumbnail = Image::where("image_url", "defaultProductImage.png")->first();
+        }
+        return $thumbnail;
     }
 
     public function getCoverImagesAttribute(){

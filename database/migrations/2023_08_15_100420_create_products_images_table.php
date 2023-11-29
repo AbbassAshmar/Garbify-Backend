@@ -11,14 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('images', function (Blueprint $table) {
+        Schema::create('products_images', function (Blueprint $table) {
             $table->id();
             $table->timestamps();
-            $table->foreignId("product_id")->constrained()->onDelete("cascade");
+            $table->foreignId("product_id")->nullable()->constrained()->onDelete("cascade");
             $table->string("image_details")->nullable();
             $table->string("image_url")->unique();
-            $table->foreignId("color_id")->constrained()->onDelete("set null");
-            $table->foreignId("size_id")->constrained()->onDelete("set null");
+            $table->foreignId("color_id")->nullable()->constrained()->onDelete("set null");
+            $table->foreignId("size_id")->nullable()->constrained()->onDelete("set null");
             $table->boolean("is_thumbnail")->default(false)->nullable();
         });
     }

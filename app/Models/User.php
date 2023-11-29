@@ -29,6 +29,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'profile_picture'
     ];
 
     /**
@@ -36,11 +37,12 @@ class User extends Authenticatable
      *
      * @var array<int, string>
      */
+    protected $appends = ['profile_picture'];
     protected $hidden = [
         'password',
         'remember_token',
         'created_at',
-        'updated_at'
+        'updated_at',
     ];
 
     /**
@@ -80,5 +82,13 @@ class User extends Authenticatable
 
     public function setPasswordAttribute($password){
         $this->attributes['password'] = Hash::make($password);
+    }
+
+    public function getProfilePictureAttribute(){
+        $current_pfp =  $this->attributes['profile_picture'];
+        if (!$current_pfp){
+            $current_pfp = 'defaultUserProfilePicture.jpg';
+        }
+        return asset('/storage/usersProfilePictures/'.$current_pfp);
     }
 }

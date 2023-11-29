@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\Image;
+use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
@@ -13,7 +15,7 @@ class UserRolePermissionSeeder extends Seeder
      * Run the database seeds.
      */
     public function run(): void
-    {  
+    {   
         // create rules 
         $anonymousRole = Role::create(['name'=>'anonymous']);
         $clientRole = Role::create(['name'=>'client']);

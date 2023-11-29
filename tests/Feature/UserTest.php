@@ -199,6 +199,7 @@ class UserTest extends TestCase
 
     public function test_update_user_name_and_profile_picture():void
     {   
+        $this->assertNull($this->user_1->profile_picture); //no profile picture initially
         // Create a fake image file
         $fakeImage = UploadedFile::fake()->image('test_image.jpg');
 

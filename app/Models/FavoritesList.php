@@ -39,22 +39,23 @@ class FavoritesList extends Model
 
     public function isLikedByCurrentUser($current_user=null){
         // if no user is logged in or anonymous user ,return false
-        if (!$current_user || $current_user->hasRole("anonymous")){
-            return False;
-        }
+        if (!$current_user || $current_user->hasRole("anonymous")) return False;
+
         $liked  = $this->likes()->where("user_id" , $current_user->id)->first();
         return $liked ? true : false ;
     }
 
     public function getThumbnailAttribute(){
-        if ($this->attributes['thumbnail']){
-            return $this->attributes['thumbnail'];
-        }
-        $products_thumb = $this->favorites()->first()->product->thumbnail;
-        if ($products_thumb){
-            return $products_thumb->image_url;
-        }
-        return null;
+        if ($this->attributes['thumbnail'])
+        return asset('/storage/favoritesListsThumbnails/'.$this->attributes['thumbnail']);
+
+        //if no thumbnail return first favorite thumb
+        $products_thumb = $this->favorites()->first()->product->thumbnail; 
+        if ($products_thumb && !str_ends_with($products_thumb->image_url,"defaultProductImage.png")) 
+        return $products_thumb->image_url;
+
+        // return default
+        return asset('/storage/favoritesListsThumbnails/'."defaultFavoritesListThumbnail.png"); 
     }
  
 }
