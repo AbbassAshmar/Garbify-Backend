@@ -58,7 +58,8 @@ class FavoritesListTest extends TestCase
             'user_id' => $this->user_1->id,
             'name' => $this->user_1->name . "'s Favorites",
             'views_count'=>0,
-            'likes_count'=>0
+            'likes_count'=>0,
+            'thumbnail' => null
         ]);
         $this->favorite_1 = Favorite::create([
             'favorites_list_id' => $this->favorites_list_1->id, 
@@ -70,7 +71,8 @@ class FavoritesListTest extends TestCase
             'user_id' => $this->user_2->id,
             'name' => $this->user_2->name . "'s Favorites",
             'views_count'=>3,
-            'likes_count'=>3
+            'likes_count'=>3,
+            'thumbnail' => null
             //ratio:-9
         ]);
         Favorite::create([
@@ -83,7 +85,8 @@ class FavoritesListTest extends TestCase
             'user_id' => $user_3->id,
             'name' => $user_3->name . "'s Favorites",
             'views_count'=>6,
-            'likes_count'=>2
+            'likes_count'=>2,
+            'thumbnail' => null
             //ratio : -2
 
         ]);
@@ -483,6 +486,9 @@ class FavoritesListTest extends TestCase
     
     public function test_update_favorites_list_name_and_thumbnail():void
     {   
+        // default profile picture initially
+        $this->assertTrue(str_ends_with($this->favorites_list_1->thumbnail,'defaultFavoritesListThumbnail.png')); 
+        
         // Create a fake image file
         $fakeImage = UploadedFile::fake()->image('test_image.jpg');
 

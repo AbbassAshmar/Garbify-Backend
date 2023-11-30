@@ -29,29 +29,29 @@ class UserTest extends TestCase
         $this->token_1 = $create_users['tokens'][0];
     }
 
-    // public function test_register():void
-    // {
-    //     $this->assertEmpty(FavoritesList::all());
-    //     $data = [
-    //         "username" => "test" , 
-    //         "email" => "test@gmail.com", 
-    //         "password"  => "acccppddd8",
-    //         "confirm_password"  => "acccppddd8"
-    //     ];
-    //     $request = $this->postJson("/api/register",$data);
-    //     $request->assertCreated();
-    //     $request->assertJsonStructure([
-    //         'data' => ['user', 'token'],
-    //         'error',
-    //         'status',
-    //         'metadata'
-    //     ]);
+    public function test_register():void
+    {
+        $this->assertEmpty(FavoritesList::all());
+        $data = [
+            "username" => "test" , 
+            "email" => "test@gmail.com", 
+            "password"  => "acccppddd8",
+            "confirm_password"  => "acccppddd8"
+        ];
+        $request = $this->postJson("/api/register",$data);
+        $request->assertCreated();
+        $request->assertJsonStructure([
+            'data' => ['user', 'token'],
+            'error',
+            'status',
+            'metadata'
+        ]);
 
-    //     //assert the creation of a favorites list for the new user
-    //     $user_id = $request->json()['data']['user']['id'];
-    //     $favoritesList = FavoritesList::where("user_id",$user_id)->first();
-    //     $this->assertNotNull($favoritesList);
-    // }
+        //assert the creation of a favorites list for the new user
+        $user_id = $request->json()['data']['user']['id'];
+        $favoritesList = FavoritesList::where("user_id",$user_id)->first();
+        $this->assertNotNull($favoritesList);
+    }
 
     public function test_register_email_already_used():void
     {
@@ -199,7 +199,9 @@ class UserTest extends TestCase
 
     public function test_update_user_name_and_profile_picture():void
     {   
-        $this->assertNull($this->user_1->profile_picture); //no profile picture initially
+        // default profile picture initially
+        $this->assertTrue(str_ends_with($this->user_1->profile_picture,'defaultUserProfilePicture.jpg')); 
+        
         // Create a fake image file
         $fakeImage = UploadedFile::fake()->image('test_image.jpg');
 

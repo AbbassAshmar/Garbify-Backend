@@ -28,6 +28,8 @@ class StripeController extends Controller
         $event = null;
 
         try {
+            // sig_header : payload hashed by stripe using endpoint secret
+            // rehash payload using own secret, if equals sig_header, then accept it (means owr secret equals their secret)
             $event = Webhook::constructEvent(
                 $payload, $sig_header, $endpoint_secret
             );

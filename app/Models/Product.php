@@ -5,6 +5,7 @@ namespace App\Models;
 use DateTime;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\ProductsImage;
 
 class Product extends Model
 {
@@ -48,7 +49,7 @@ class Product extends Model
     }
 
     public function images(){
-        return $this->hasMany(Image::class);
+        return $this->hasMany(ProductsImage::class);
     }
 
     public function orderDetails(){
@@ -62,7 +63,7 @@ class Product extends Model
     public function getThumbnailAttribute(){
         $thumbnail=  $this->images()->where("is_thumbnail",true)->first();
         if (!$thumbnail){
-            $thumbnail = Image::where("image_url", "defaultProductImage.png")->first();
+            $thumbnail = ProductsImage::where("image_url", "defaultProductImage.png")->first();
         }
         return $thumbnail;
     }

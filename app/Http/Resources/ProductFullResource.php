@@ -4,10 +4,10 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Http\Resources\ProductsImageResource;
 
 class ProductFullResource extends JsonResource
 {
-
     /**
      * Transform the resource into an array.
      *
@@ -19,7 +19,7 @@ class ProductFullResource extends JsonResource
         $obj = []; 
         for ($i = 0 ; $i < count($colors) ; $i++){
             $color = $colors[$i];
-            $obj[$color] = ImageResource::collection($this->images()->whereHas("color", function($query)use(&$color){
+            $obj[$color] = ProductsImageResource::collection($this->images()->whereHas("color", function($query)use(&$color){
                 $query->where("color",$color);
             })->get());
         }

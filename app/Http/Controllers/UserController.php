@@ -31,7 +31,8 @@ class UserController extends Controller
             $new_user = User::create([
                 'email' => $valid['email'] , 
                 'name'=>$valid['username'],
-                'password'=>$valid['password']
+                'password'=>$valid['password'],
+                'profile_picture'=>null
             ]);
         }catch(Exception $e){
             return null;

@@ -167,15 +167,14 @@ class ProductController extends Controller{
         $size = $request->input("size");
         $price = $request->input("price");
         $categories= $request->input("categories") ?$request->input("categories"):[];
-        $sort_by = $request->input("sort-by");
-        $page = $request->input("page"); 
-        $limit = $request->input("limit");
+        $sort_by = $request->input("sort_by");
+        // dd($request->input("sort_by"));
+        $pageLimit = ['page'=>$request->input("page"),'limit'=>$request->input("limit")];
         $sales = $request->input("sales");
         $new_arrivals = $request->input("new-arrivals");
         $search = $request->input("q");
         
         $products=  Product::with([]);
-
         if ($search){
             $products = $products->where('name','like',"%$search%");
         }
@@ -188,8 +187,8 @@ class ProductController extends Controller{
             'price'=>$price,
             'categories' =>$categories,
             'sort_by' =>$sort_by,
-            'page' =>$page,
-            'limit'=>$limit
+            'page' =>$pageLimit['page'],
+            'limit'=>$pageLimit['limit']
         ];
 
         $products = $this->filterProducts($products,$filters);
@@ -198,11 +197,10 @@ class ProductController extends Controller{
         $products = HelperController::getCollectionAndCount(
             $products,
             $filters["sort_by"],
-            ['page'=>$filters['page'],'limit'=>$filters['limit']],
+            $pageLimit,
             ProductResource::class,
             'products'
         );
-
         return response($products, 200) ;
     }
 

@@ -36,7 +36,7 @@ class ProductTest extends TestCase
     public function test_list_products():void 
     {
         $request = $this->getJson("/api/products");
-        $request->assertStatus(200);
+        $request->assertOk();
         $request->assertJsonFragment([
             "metadata"=>[
                 "count" => 3,
@@ -65,7 +65,7 @@ class ProductTest extends TestCase
 
     public function test_list_products_search_sort_price_desc():void
     {
-        $request = $this->getJson("/api/products?q=air&sort+by=Price+ASC");
+        $request = $this->getJson("/api/products?q=air&sort+by=Price+DESC");
         $request->assertStatus(200);
         $data = [
             "products"=>[
@@ -83,6 +83,7 @@ class ProductTest extends TestCase
         $response_body = HelperTest::getSuccessResponse($data,$metadata);
         $request->assertJson($response_body);
     }
+    
     public function test_list_products_filter_by_color():void
     {
         $request = $this->getJson("/api/products?color=violet");
