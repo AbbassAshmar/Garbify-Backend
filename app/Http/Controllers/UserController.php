@@ -17,6 +17,8 @@ use GuzzleHttp\Exception\ServerException;
 use Illuminate\Validation\ValidationData;
 use Illuminate\Validation\ValidationException;
 
+use function PHPUnit\Framework\isEmpty;
+
 class UserController extends Controller
 {
     //helper
@@ -148,6 +150,66 @@ class UserController extends Controller
     }
 
     public function updateUser(Request $request){
+        $user = $request->user();
+        $validated_data = $request->validate([
+            'email'=>['bail','unique:users,email', 'email'],
+            'name'=>['bail', 'max:256','string'],
+            'profile_picture'=>['bail','max:5000', 'image','mimes:jpg,jpeg,png'],
 
+            'password'=> ['bail','required_with_all:old_password,confirm_password','string','regex:/\d/','min:8','same:confirm_password'],
+            'old_password'=> ['bail','required_with_all:password,confirm_password' , 'string' ,'regex:/\d/','min:8'],
+            'confirm_password'=>['bail','required_with_all:old_password,password', 'same:password'],
+
+            'id'=>['prohibited'],
+            'created_at'=>['prohibited'],
+            'updated_at'=>['prohibited'],
+        ],[
+            'created_at.prohibited'=>"You do not have the required authorization to update this field.", 
+            'updated_at.prohibited'=>"You do not have the required authorization to update this field.", 
+            'id.prohibited'=>"You do not have the required authorization to update this field.", 
+            'confirm_password.same'=>"Passwords do not match.",
+            'password.same'=>"",
+        ]);
+
+        if (empty($validated_data)){
+            return response(HelperController::getSuccessResponse(null, null),200);
+        }
+
+        // remove old password and confirm password from the update array
+        if(isset($validated_data['password'])){
+            if(!Hash::check($validated_data['old_password'],$user->password)){
+                throw ValidationException::withMessages([
+                    'old password' => 'Old password is incorrect.'
+                ]);
+            }
+            unset($validated_data['old_password']);
+            unset($validated_data['confirm_password']);
+        }
+
+        // store profile picture 
+        if(isset($validated_data['profile_picture'])){
+            $name = $validated_data['profile_picture']->hashName();
+            $path= $validated_data['profile_picture']->storeAs('/public/usersProfilePictures',$name);
+            $validated_data['profile_picture'] = basename($path);
+        }
+
+        $update = $user->update($validated_data);
+        
+        if (isset($validated_data['password'])){
+            $validated_data['password']= $user->password;
+        }
+
+        if(isset($validated_data['profile_picture'])){
+            $symlink_dir = '/storage/usersProfilePictures/'.$validated_data['profile_picture'];
+            $validated_data['profile_picture'] = asset($symlink_dir);        
+        }
+
+        if ($update){
+            return HelperController::retrieveResource($validated_data,"user");
+        } 
+
+        $error = ['message'=>'Update failed.', 'code'=>400];
+        $response_body = HelperController::getFailedResponse($error,null);
+        return response($response_body,400);
     }
 }

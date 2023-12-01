@@ -8,6 +8,7 @@ use Database\Seeders\UserRolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class UserTest extends TestCase
@@ -139,7 +140,7 @@ class UserTest extends TestCase
         $this->assertEquals($this->user_1->name , 'new_name');
     }
 
-    public function test_update_favorites_list_no_fields_to_update():void
+    public function test_update_user_no_fields_to_update():void
     {
         $headers = ["Authorization" => "Bearer " . $this->token_1]; 
         $data = [];
@@ -153,7 +154,7 @@ class UserTest extends TestCase
         $headers = ["Authorization" => "Bearer ".$this->token_1];
         $body = [
             "name" => "new_name",
-            "email" => "User2@gmail.com@gmail.com" // already used by user_2
+            "email" => "User2@gmail.com" // already used by user_2
         ];
 
         $request = $this->patchJson("/api/users/user",$body, $headers);
@@ -162,10 +163,10 @@ class UserTest extends TestCase
         $error = [
             'message' => 'Validation error.',
             'code'=>400,
-            'details' => ['email' => 'The email has already been taken.']
+            'details' => ['email' => ['The email has already been taken.']]
         ];
         $metadata =['error_fields' => ["email"]];
-        $response = HelperTest::getSuccessResponse($error, $metadata);
+        $response = HelperTest::getFailedResponse($error, $metadata);
         $request->assertJson($response);
 
         $this->user_1->refresh();
@@ -206,12 +207,11 @@ class UserTest extends TestCase
         $fakeImage = UploadedFile::fake()->image('test_image.jpg');
 
         $headers = ["Authorization" => "Bearer " . $this->token_1]; 
-        $body = ['name' => 'new_name' , 'thumbnail' =>$fakeImage];
+        $body = ['name' => 'new_name' , 'profile_picture' =>$fakeImage];
 
         $request = $this->patchJson("/api/users/user",$body, $headers);
         $request->assertOk();
 
-       
         $expected_json_struc = [
             'status',
             'data' => [
@@ -228,4 +228,23 @@ class UserTest extends TestCase
         $returned_pfp =$request->json()['data']['user']['profile_picture'];
         $this->assertTrue(strpos($returned_pfp,$expected_pfp) === 0);
     }
+
+    public function test_update_user_name_and_password():void
+    {
+        $headers = ["Authorization" => "Bearer ".$this->token_1];
+        $body = [
+            "name" => "new_name",
+            "password" => "Newpass123",
+            "confirm_password" => "Newpass123",
+            'old_password'=> 'User1password'
+        ];
+        $request = $this->patchJson("/api/users/user",$body, $headers);
+        $this->user_1->refresh();
+
+        $request->assertOk();
+        $this->assertEquals($this->user_1->name , 'new_name');
+        $this->assertTrue(Hash::check("Newpass123",$this->user_1->password));
+    }
+
+
 }

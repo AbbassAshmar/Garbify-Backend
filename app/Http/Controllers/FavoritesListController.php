@@ -115,12 +115,14 @@ class FavoritesListController extends Controller
             "thumbnail" => ['bail' , 'max:5000', 'mimes:jpeg,jpg,png','image'],
             'public' => ['bail', 'boolean'],
             'id' => ['prohibited'],
-            'createdAt' => ['prohibited'],
+            'created_at' => ['prohibited'],
+            'updated_at' => ['prohibited'],
             'views_count' => ['prohibited'],
             'likes_count' => ['prohibited'],
         ],[
             'id.prohibited'=>"You do not have the required authorization to update this field.",
-            'createdAt.prohibited'=>"You do not have the required authorization to update this field.", 
+            'created_at.prohibited'=>"You do not have the required authorization to update this field.",
+            'updated_at.prohibited'=>"You do not have the required authorization to update this field.",  
             'views_count.prohibited'=>"You do not have the required authorization to update this field.", 
             'likes_count.prohibited'=>"You do not have the required authorization to update this field.", 
         ]);

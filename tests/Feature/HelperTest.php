@@ -51,12 +51,12 @@ class HelperTest {
     }
 
     public static function create_users(){
-        $anonymous_user = User::create(['email'=>"anonymousUser@anonymous.com", "name"=>'anonymous','password'=>"234924ukl"]);
+        $anonymous_user = User::create(['email'=>"anonymousUser@anonymous.com", "name"=>'anonymous','password'=>"234924ukl",'profile_picture'=>null]);
         $anonymous_user->assignRole("anonymous");
 
-        $user_1 = User::create(["email"=>"abc@gmail.com", "password"=>"abdc", "name"=>"abc"]);
-        $user_2 = User::create(["email"=>"User2@gmail.com", "password"=>"abdc", "name"=>"fjsabcdio"]);
-        $user_3 = User::create(["email"=>"user_3@gmail.com", "password"=>"abdc", "name"=>"asiodfj"]);
+        $user_1 = User::create(["email"=>"abc@gmail.com", "password"=>"User1password", "name"=>"abc",'profile_picture'=>null]);
+        $user_2 = User::create(["email"=>"User2@gmail.com", "password"=>"abdc", "name"=>"fjsabcdio",'profile_picture'=>null]);
+        $user_3 = User::create(["email"=>"user_3@gmail.com", "password"=>"abdc", "name"=>"asiodfj",'profile_picture'=>null]);
 
         $user_1->assignRole("client");
         $user_2->assignRole("client");
