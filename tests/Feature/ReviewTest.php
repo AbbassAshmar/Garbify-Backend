@@ -14,6 +14,9 @@ use Tests\TestCase;
 use App\Models\User;
 use Carbon\Carbon;
 use Database\Seeders\UserRolePermissionSeeder;
+use Illuminate\Http\UploadedFile;
+use PHPUnit\TextUI\Help;
+use Termwind\Components\Hr;
 use Tests\Feature\HelperTest;
 
 class ReviewTest extends TestCase
@@ -27,7 +30,9 @@ class ReviewTest extends TestCase
     private $token_2;
     private $product_1;
     private $product_2;
-
+    private $size_1;
+    private $color_1;
+    
     public  function setUp():void{
         parent::setUp();
         $this->seed(UserRolePermissionSeeder::class);
@@ -44,9 +49,11 @@ class ReviewTest extends TestCase
         $products = HelperTest::create_products();
         $this->product_1 = $products[0];
         $this->product_2 = $products[1];
-        $color = HelperTest::create_colors()[0];
-     
+        $this->color_1 = HelperTest::create_colors()[0];
+        $this->size_1 = HelperTest::create_sizes()[0];
+
         // create reviews for a product 
+        //user_1 review_1 of product_1
         $this->review_1 = Review::create([
             'created_at' => (new DateTime('2022-09-02'))->format('Y-m-d H:i:s'),
             'user_height'=> 190,
@@ -55,10 +62,12 @@ class ReviewTest extends TestCase
             'product_id' =>$this->product_1->id,
             'title'=>"review 1",
             'text' =>'review 1 text',
-            'color_id' =>$color->id,
+            'color_id' =>$this->color_1->id,
             'helpful_count' =>1,
             'product_rating'=>3.5,
         ]);
+
+        //user_1 review_2 of product_1
         $this->review_2 = Review::create([
             'created_at' => (new DateTime('2024-09-02'))->format('Y-m-d H:i:s'),
             'user_height'=> 150,
@@ -67,7 +76,7 @@ class ReviewTest extends TestCase
             'product_id' =>$this->product_1->id,
             'title'=>"review 2",
             'text' =>'review 2 text',
-            'color_id' =>$color->id,
+            'color_id' =>$this->color_1->id,
             'helpful_count' =>1,
             'product_rating'=>2,
         ]);
@@ -359,63 +368,134 @@ class ReviewTest extends TestCase
         $this->assertNull($review_deleted);
     }
 
-    // public function test_delete_review_by_other_user():void
-    // {
-    //     $review = Review::create([
-    //         'created_at' => (new DateTime('2022-09-02'))->format('Y-m-d H:i:s'),
-    //         'user_height'=> 190,
-    //         'user_weight' => 80,
-    //         'user_id' =>$this->user_1->id,
-    //         'product_id' =>$this->product_2->id,
-    //         'title'=>"review 3",
-    //         'text' =>'review 3 text',
-    //         'helpful_count' =>1,
-    //         'product_rating'=>3.5,
-    //     ]);
+    public function test_delete_review_by_other_user():void
+    {
+        $review = Review::create([
+            'created_at' => (new DateTime('2022-09-02'))->format('Y-m-d H:i:s'),
+            'user_height'=> 190,
+            'user_weight' => 80,
+            'user_id' =>$this->user_1->id,
+            'product_id' =>$this->product_2->id,
+            'title'=>"review 3",
+            'text' =>'review 3 text',
+            'helpful_count' =>1,
+            'product_rating'=>3.5,
+        ]);
+       
+        $headers= ['Authorization' => "Bearer " . $this->token_2]; // user 2 deleting review of user 1
+        $request = $this->deleteJson("/api/reviews/".$review->id , [] , $headers);
+        $request->assertForbidden();
+        $error =['message'=>'You do not have the required authorization.', 'code'=>403];
+        $response_body  = HelperTest::getFailedResponse($error, null);
+        $request->assertJson($response_body);
 
-    //     $headers= ['Authorization' => "Bearer " .$this->token_2]; // user 2 deleting review of user 1
-    //     $request = $this->deleteJson("/api/reivews/"+$review->id , [] , $headers);
-    //     $request->assertForbidden();
-    //     $request->assertJson([
-    //         'action'=>'not deleted.',
-    //         'message' => 'You do not have permission to delete this review.'
-    //     ]);
-
-    //     $review_deleted = Review::find($review->id);
-    //     $this->assertNotNull($review_deleted);
-    // }
-    // public function test_delete_review_does_not_exist():void
-    // {
-    //     $headers= ['Authorization' => "Bearer " .$this->token_1];
-    //     $request = $this->deleteJson("/api/reivews/"+12312 , [] , $headers);
-    //     $request->assertBadRequest();
-    //     $request->assertJson(['message'=>'Review does not exist.']);
-        
-    // }
+        $review_deleted = Review::find($review->id);
+        $this->assertNotNull($review_deleted);
+    }
+    public function test_delete_review_does_not_exist():void
+    {
+        $headers= ['Authorization' => "Bearer " .$this->token_1];
+        $request = $this->deleteJson("/api/reivews/12312" , [] , $headers);
+        $request->assertNotFound();  
+    }
 
     // createReview tests 
 
-    // public function test_create_review():void
-    // {
-    //     $data = [
-    //         "product_id" => $this->product_1->id,
-    //         "text" => "nice material and the size is perfect",
-    //         "title" => "amazing",
-    //         "user_height"=>190,
-    //         "user_weight" =>80,
-    //         'size' => 'l',
-    //         'color' =>'red',
-    //         'images' => [
-    //             'url1',
-    //             'url2',
-    //             'url3'
-    //         ]
-    //     ];
-    //     $request = $this->postJson("/api/reivews", $data , [
-    //         "content-type"=>"application/json",
-    //         'accept'=>'application/json',
-    //         'Authorization' => "Bearer " .$this->token_1
-    //     ]);
-    // }
+    public function test_create_review():void
+    {
+        $img1 = UploadedFile::fake()->image('test_image_1.jpg');
+        $img2 = UploadedFile::fake()->image('test_image_2.jpg');
+        $img3 = UploadedFile::fake()->image('test_image_3.jpg');
 
+        $body = [
+            "product_id" => $this->product_2->id,
+            "text" => "nice material and the size is perfect",
+            "title" => "amazing",
+            "user_height"=>"190cm",
+            "user_weight" =>"80kg",
+            'product_rating'=>4,
+            'size' => $this->size_1->size,
+            'color' => $this->color_1->color,
+            'images' => [
+                $img1,
+                $img2,
+                $img3
+            ]
+        ];
+        
+        $headers =['Authorization' => "Bearer " .$this->token_1];
+        $request = $this->postJson("/api/reviews", $body ,$headers);
+        $request->assertCreated();
+        $data = ['action'=>'created'];
+        $response_body = HelperTest::getSuccessResponse($data,null);
+        $request->assertJson($response_body);
+    }
+
+    public function test_create_review_product_already_reviewed():void
+    {
+        $img1 = UploadedFile::fake()->image('test_image_1.jpg');
+        $img2 = UploadedFile::fake()->image('test_image_2.jpg');
+        $img3 = UploadedFile::fake()->image('test_image_3.jpg');
+
+        $body = [
+            "product_id" => $this->product_1->id,
+            "text" => "nice material and the size is perfect",
+            "title" => "amazing",
+            "user_height"=>"190cm",
+            "user_weight" =>"80kg",
+            'product_rating'=>4,
+            'size' => $this->size_1->size,
+            'color' => $this->color_1->color,
+            'images' => [
+                $img1,
+                $img2,
+                $img3
+            ]
+        ];
+        
+        $headers =['Authorization' => "Bearer " .$this->token_1];
+        $request = $this->postJson("/api/reviews", $body ,$headers);
+        $request->assertBadRequest();
+        $error = ['message'=>'You have already reviewed this product.','code'=>400];
+        $response_body = HelperTest::getFailedResponse($error,null);
+        $request->assertJson($response_body);
+    }
+
+    public function test_create_review_number_of_images_over_limit():void
+    {
+        $img1 = UploadedFile::fake()->image('test_image_1.jpg');
+        $img2 = UploadedFile::fake()->image('test_image_2.jpg');
+        $img3 = UploadedFile::fake()->image('test_image_3.jpg');
+        $img4 = UploadedFile::fake()->image('test_image_4.jpg');
+        $body = [
+            "product_id" => $this->product_1->id,
+            "text" => "nice material and the size is perfect",
+            "title" => "amazing",
+            "user_height"=>"190cm",
+            "user_weight" =>"80kg",
+            'product_rating'=>4,
+            'size' => $this->size_1->size,
+            'color' => $this->color_1->color,
+            'images' => [
+                $img1,
+                $img2,
+                $img3,
+                $img4
+            ]
+        ];
+        
+        $headers =['Authorization' => "Bearer " .$this->token_1];
+        $request = $this->postJson("/api/reviews", $body ,$headers);
+        $request->assertBadRequest();
+        $error = [
+            'message'=>'Validation error.',
+            'details'=>[
+                'images'=>["The maximum amount of images allowed is 3."]
+            ],
+            'code'=>400
+        ];
+        $metadata= ['error_fields'=>['images']];
+        $response_body = HelperTest::getFailedResponse($error,$metadata);
+        $request->assertJson($response_body);
+    }
 }

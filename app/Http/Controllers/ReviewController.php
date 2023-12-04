@@ -100,35 +100,41 @@ class ReviewController extends Controller
     function createReview(Request $request){
         $validated_data = $request->validate([
             'images' =>['bail','max:3','nullable'],
-            'images.*' => ['bail','max:5000','nullable','mimes:doc,pdf,docx,zip,jpeg,png,jpg,gif,svg'],
+            'images.*' => ['bail','max:5000','nullable','mimes:jpeg,png,jpg'],
             'title' => ['bail', 'required','string'],
             'text' =>['bail','required', 'string'], 
-            'product_id'=>['bail','required','string'],
-            'product_rating' =>['bail','required','string'],
+            'product_id'=>['bail','required','integer'],
+            'product_rating' =>['bail','required','integer'],
             'user_height' =>['bail','nullable','string', 'max:256'],
             'user_weight' =>['bail','nullable','string','max:256'],
             'size' =>['bail','nullable','string','max:256'],
             'color' =>['bail','nullable','string','max:256'],
+        ],[
+            'images.max' => 'The maximum amount of images allowed is 3.'
         ]);
 
         // get the user instance 
         $user = $request->user();
 
         //get the product instance 
-        $product =Product::find((int)$validated_data['product_id']);
-        HelperController::checkIfNotFound($product,"Product ");
+        $product =Product::find($validated_data['product_id']);
+        HelperController::checkIfNotFound($product,"Product");
         
         // check if the user has a review on the product 
         $review = Review::where([["user_id", $user->id],['product_id',$product->id]])->first();
-        if ($review) return response(['message'=>"you have already reviewed this product."],400);
-        
+        if ($review) {
+            $error = ['message'=>"You have already reviewed this product.", 'code'=>400];
+            $response_body = HelperController::getFailedResponse($error,null);
+            return response($response_body,400);
+        }
+
         // fields to create a review instance 
         $data = [
             'title'=> $validated_data['title'],
             'text' =>$validated_data['text'],
             'product_id'=> $product->id,
             'user_id'=> $user->id,
-            'product_rating' => (int)$validated_data['product_rating'],
+            'product_rating' => $validated_data['product_rating'],
             'size_id' => null,
             'color_id' =>null,
             'user_height' =>null,
@@ -155,7 +161,9 @@ class ReviewController extends Controller
         try {
             $review = Review::create($data);
         }catch(Exception $e){
-            return response(['error'=>$e->getMessage()],400);
+            $error = ['message'=>'Something unexpected happened.', 'code'=>400];
+            $response_body = HelperController::getFailedResponse($error,null);
+            return response($response_body,400);
         }
 
         // create images instances from the images in the request
@@ -173,6 +181,8 @@ class ReviewController extends Controller
             }
         }
 
-        return response(['created' => 'true'],201);
+        $data= ['action'=>'created'];
+        $response_body = HelperController::getSuccessResponse($data,null);
+        return response($response_body,201);
     }
 }

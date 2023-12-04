@@ -24,15 +24,19 @@ class UserController extends Controller
     //helper
     public function createUser($request){
         $valid =$request->validate([
-            'username' =>['bail','required', 'string', 'max:256'],
+            'name' =>['bail','required', 'string', 'max:256'],
             'email'=>['bail','unique:users,email', 'required', 'email'],
-            'password' =>['required' ,'string' ,'regex:/\d/','min:8','same:confirm_password'],
-            'confirm_password'=> ['required','same:password'],
-        ],['confirm_password.same' => "Passwords do not match.", 'password.same' => '']);
+            'password' =>['bail','required' ,'string' ,'regex:/\d/','regex:/.*[A-Z].*/','min:8','same:confirm_password'],
+            'confirm_password'=> ['bail','required','same:password'],
+        ],[
+            'password.min' => 'Password should be at least 8 characters.',
+            'password.same' => '',
+            'confirm_password.same' => "Passwords do not match.", 
+        ]);
         try {
             $new_user = User::create([
                 'email' => $valid['email'] , 
-                'name'=>$valid['username'],
+                'name'=>$valid['name'],
                 'password'=>$valid['password'],
                 'profile_picture'=>null
             ]);
@@ -155,20 +159,39 @@ class UserController extends Controller
             'email'=>['bail','unique:users,email', 'email'],
             'name'=>['bail', 'max:256','string'],
             'profile_picture'=>['bail','max:5000', 'image','mimes:jpg,jpeg,png'],
-
-            'password'=> ['bail','required_with_all:old_password,confirm_password','string','regex:/\d/','min:8','same:confirm_password'],
-            'old_password'=> ['bail','required_with_all:password,confirm_password' , 'string' ,'regex:/\d/','min:8'],
-            'confirm_password'=>['bail','required_with_all:old_password,password', 'same:password'],
-
+            'old_password'=> [
+                'bail',
+                'required_with:password,confirm_password',
+                'string' ,
+                'current_password',
+            ],
+            'password'=> [
+                'required_with:old_password,confirm_password',
+                'bail',
+                'string',
+                'regex:/\d/',
+                'regex:/.*[A-Z].*/',
+                'min:8',
+                'same:confirm_password'
+            ],
+            'confirm_password'=>[
+                'required_with:old_password,password',
+                'bail',
+                'same:password'
+            ],
             'id'=>['prohibited'],
             'created_at'=>['prohibited'],
             'updated_at'=>['prohibited'],
         ],[
+            'password.min' => 'Password should be at least 8 characters.',
             'created_at.prohibited'=>"You do not have the required authorization to update this field.", 
             'updated_at.prohibited'=>"You do not have the required authorization to update this field.", 
             'id.prohibited'=>"You do not have the required authorization to update this field.", 
             'confirm_password.same'=>"Passwords do not match.",
-            'password.same'=>"",
+            "password.required_with" => 'A new password is required to change password.',
+            "old_password.required_with" => 'Old password is required to change password.',
+            "confirm_password.required_with" => 'confirm password is required to change password.',
+            'password.same'=>''
         ]);
 
         if (empty($validated_data)){
