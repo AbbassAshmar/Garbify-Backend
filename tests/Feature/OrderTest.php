@@ -211,7 +211,7 @@ class OrderTest extends TestCase
     public function test_list_orders(): void
     {
         $headers = ["Authorization" => "Bearer " . $this->token_1];
-        $request = $this->getJson("/api/orders",$headers);
+        $request = $this->getJson("/api/users/user/orders",$headers);
         $request->assertOk();
         $data = [
             'orders' => [
@@ -231,7 +231,7 @@ class OrderTest extends TestCase
 
     public function test_list_orders_unauthenticated_user()
     {
-        $request = $this->getJson("/api/orders");
+        $request = $this->getJson("/api/users/user/orders");
         $request->assertUnauthorized();
     }
 
@@ -239,7 +239,7 @@ class OrderTest extends TestCase
     public function test_list_orders_limited()
     {
         $headers = ["Authorization" => "Bearer " . $this->token_2];
-        $request = $this->getJson("/api/orders?page=1&limit=1",$headers);
+        $request = $this->getJson("/api/users/user/orders?page=1&limit=1",$headers);
         $request->assertOk();
         $request->assertJsonFragment([
             'metadata'=>[
@@ -256,7 +256,7 @@ class OrderTest extends TestCase
     public function test_list_orders_sort_by_total_cost_DESC()
     {        
         $headers = ["Authorization" => "Bearer " . $this->token_2];
-        $request = $this->getJson("/api/orders?sort-by=total_cost-DESC",$headers);
+        $request = $this->getJson("/api/users/user/orders?sort-by=total_cost-DESC",$headers);
         $request->assertOk();
         $data = [
             'orders'=>[
@@ -279,7 +279,7 @@ class OrderTest extends TestCase
     public function test_list_orders_sort_by_total_cost_ASC()
     {
         $headers = ["Authorization" => "Bearer " . $this->token_2];
-        $request = $this->getJson("/api/orders?sort+by=total_cost+ASC",$headers);
+        $request = $this->getJson("/api/users/user/orders?sort+by=total_cost+ASC",$headers);
         $request->assertOk();
         $data = [
             'orders'=>[
@@ -302,7 +302,7 @@ class OrderTest extends TestCase
     public function test_list_orders_sort_by_created_at_DESC()
     {
         $headers = ["Authorization" => "Bearer " . $this->token_2];
-        $request = $this->getJson("/api/orders?sort+by=created_at+DESC",$headers);
+        $request = $this->getJson("/api/users/user/orders?sort+by=created_at+DESC",$headers);
         $request->assertOk();
         $data= [
             'orders'=>[
@@ -325,7 +325,7 @@ class OrderTest extends TestCase
     public function test_list_orders_sort_by_created_at_ASC()
     {
         $headers = ["Authorization" => "Bearer " . $this->token_2];
-        $request = $this->getJson("/api/orders?sort+by=created_at+ASC",$headers);
+        $request = $this->getJson("/api/users/user/orders?sort+by=created_at+ASC",$headers);
         $request->assertOk();
         $data = [
             'orders'=>[
@@ -350,7 +350,7 @@ class OrderTest extends TestCase
     public function test_list_orders_search()
     {
         $headers = ["Authorization" => "Bearer " . $this->token_2];
-        $request = $this->getJson("/api/orders?q=air+force",$headers);
+        $request = $this->getJson("/api/users/user/orders?q=air+force",$headers);
         $request->assertOk();
 
         //product of Order_3 is "air force",product of order_5 is "air force 2)

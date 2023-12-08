@@ -18,6 +18,9 @@ use UnexpectedValueException;
 use Stripe\Exception\SignatureVerificationException;
 use App\Models\User;
 use DateTime;
+use Exception;
+use Stripe\PaymentIntent;
+
 class StripeController extends Controller
 {
     function stripeWebhookEventListener(Request $request){
@@ -41,65 +44,122 @@ class StripeController extends Controller
             return response(['error' => $e->getMessage()] , 400);
         }
 
-        // Handle the event
-        $address_details = $event['data']['object']['customer_details']['address'];
-        $recipient_name =  $event['data']['object']['customer_details']['name'];
-        $recipient_phone_number = $event['data']['object']['customer_details']['phone'];
-        $recipient_email = $event['data']['object']['customer_details']['email'];
+        if ($event->type == "checkout.session.completed"){
+            // get the session from the event 
+            $session = $event->data->object;
 
-        $products_cost = $event['data']['object']['amount_subtotal'];
-        $total_cost = $event['data']['object']['amount_total'];
-        $tax_cost =  $event['data']['object']['total_details']['amount_tax'];
-        $shipping_cost = $event['data']['object']['total_details']['amount_shipping'];
+            // Retrieve the PaymentIntent by the PaymentIntent ID
+            $paymentIntent = PaymentIntent::retrieve($session->payment_intent);
 
-        $user_id = $event['data']['object']['metadata']['user_id'];
-        $products = json_decode( $event['data']['object']['metadata']['products'],true);
-        $now = (new DateTime())->format('Y-m-d H:i:s');
+            // The charges property contains the list of charges associated with the PaymentIntent
+            $charges = $paymentIntent->charges->data;
 
-        // create a shipping_address instance 
-        $shipping_address = ShippingAddress::create([
-            'user_id' => $user_id,
-            'country' =>$address_details['country'],
-            'city' =>$address_details['city'],
-            'state'=>$address_details['state'],
-            'address_line_1'=>$address_details['line1'],
-            'address_line_2'=>$address_details['line2'],
-            'postal_code'=>$address_details['postal_code'],
-            'recipient_name'=>$recipient_name,
-            'email'=>$recipient_email,
-            'phone_number' =>$recipient_phone_number,
-            'name'=>$recipient_name,
-            'created_at' => $now,
-        ]);
-        
-        // create an order instance 
-        $order = Order::create([
-            'created_at' => $now,
-            'status' =>'paid',
-            'total_cost' => $total_cost,
-            'tax_cost'=>$tax_cost,
-            'products_cost'=>$products_cost,
-            'user_id'=>$user_id,
-            'shipping_address_id' =>$shipping_address->id,
-            'shipping_method_id' =>ShippingMethod::where("cost", $shipping_cost)->first()->id
-        ]);
+            // Get the last charge id in the array
+            $charge_id = end($charges)->id;
 
-        // create order_detail instances for each product required by user 
-        foreach($products as $product){
-            OrderDetail::create([
-                'created_at' =>$now,
-                'order_id' =>$order->id ,
-                'product_id'=>$product['product_id'],
-                'ordered_quantity' =>$product['quantity'],
-                'color_id'=>Color::where('color',$product['color'])->first()->id,
-                'size_id'=> Size::where("size",$product['size'])->first()->id,
-                'product_total_price'=>$product['total_price']
+            // Handle the event
+            $address_details = $session['customer_details']['address'];
+            $recipient_name =  $session['customer_details']['name'];
+            $recipient_phone_number = $session['customer_details']['phone'];
+            $recipient_email = $session['customer_details']['email'];
+
+            $products_cost = $session['amount_subtotal'];
+            $total_cost = $session['amount_total'];
+            $tax_cost =  $session['total_details']['amount_tax'];
+            $shipping_cost = $session['total_details']['amount_shipping'];
+
+            $user_id = $session['metadata']['user_id'];
+            $products = json_decode( $session['metadata']['products'],true);
+            $now = (new DateTime())->format('Y-m-d H:i:s');
+
+            // create a shipping_address instance 
+            $shipping_address = ShippingAddress::create([
+                'user_id' => $user_id,
+                'country' =>$address_details['country'],
+                'city' =>$address_details['city'],
+                'state'=>$address_details['state'],
+                'address_line_1'=>$address_details['line1'],
+                'address_line_2'=>$address_details['line2'],
+                'postal_code'=>$address_details['postal_code'],
+                'recipient_name'=>$recipient_name,
+                'email'=>$recipient_email,
+                'phone_number' =>$recipient_phone_number,
+                'name'=>$recipient_name,
+                'created_at' => $now,
             ]);
-        }
 
+            // create an order instance 
+            $order = Order::create([
+                'created_at' => $now,
+                'status' =>'paid',
+                'total_cost' => $total_cost,
+                'tax_cost'=>$tax_cost,
+                'products_cost'=>$products_cost,
+                'user_id'=>$user_id,
+                'shipping_address_id' =>$shipping_address->id,
+                'shipping_method_id' =>ShippingMethod::where("cost", $shipping_cost)->first()->id,
+                'charge_id' => $charge_id,
+            ]);
+
+            // create order_detail instances for each product required by user 
+            foreach($products as $product){
+                OrderDetail::create([
+                    'created_at' =>$now,
+                    'order_id' =>$order->id ,
+                    'product_id'=>$product['product_id'],
+                    'ordered_quantity' =>$product['quantity'],
+                    'color_id'=>Color::where('color',$product['color'])->first()->id,
+                    'size_id'=> Size::where("size",$product['size'])->first()->id,
+                    'product_total_price'=>$product['total_price']
+                ]);
+            }
+        }
         return response(['Received unknown event type'=>$event], 200);
     }
     
+    function refundOrder(Request $request){
+        $order  = Order::find($request->input("order_id"));
+        HelperController::checkIfNotFound($order,"Order");
+
+        //check order status 
+
+        // refund order
+        $stripe = new StripeClient(env("STRIPE_SECRET"));
+        try {
+            // create a refund 
+            $refund = $stripe->refunds->create([
+                'charge' => $order->charge_id,
+            ]);
+        
+            if ($refund->status === 'failed') {
+                $error = [
+                    'message'=>'Refund failed.',
+                    'details' => $refund->failure_reason,
+                    'code' => 400, 
+                ];
+                $response_body = HelperController::getFailedResponse($error, null);
+                return response($response_body, 400);
+            }
+
+            $data = ['action' => 'refunded'];
+            $metaData = [
+                'amount' => $refund->amount
+            ];
+            $response_body = HelperController::getSuccessResponse($data, $metaData);
+            return response($response_body, 200);
+
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            $error = [
+                'message'=>'Refund failed.',
+                'details' => $e->getMessage(),
+                'code' => 400, 
+            ];
+            $response_body = HelperController::getFailedResponse($error, null);
+            return response($response_body, 400);
+        }
+    }  
+
+
     function stripeBase(Request $request){
         $user = $request->user();
         // $products = $request->input("products");
@@ -192,11 +252,10 @@ class StripeController extends Controller
                 'success_url' => 'http://localhost:5173/checkout-successful',
                 'cancel_url' => 'http://localhost:5173/cart',
 
-                'metadata' => [
+                'metadata' => [  // stored in the payment intent to be retrieved later 
                     'user_id'=>$user->id,
                     'token_id'=>$request->bearerToken(),
                     'products'=> json_encode($products),
-
                 ],
 
                 'phone_number_collection' => [
@@ -227,9 +286,7 @@ class StripeController extends Controller
                         ],
                     ];
                 },$shipping_options),
-                
             ]);
-
             return response(['form_url'=>$session->url]);
         }catch (CardException $e){
             return response(["error"=>$e->getMessage()]);
