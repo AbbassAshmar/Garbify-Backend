@@ -104,13 +104,14 @@ class Product extends Model
     }
 
     public function getCurrentSaleAttribute(){
-        $sales_collection = $this->sales()->orderBy("starts_at",'DESC')->first();
-        return $sales_collection;
+        $now = (new DateTime())->format('Y-m-d H:i:s');
+        $sale = $this->sales()->where([['starts_at' , '<=' ,$now ],['ends_at','>',$now]])->orderBy('starts_at','DESC')->first();
+        return $sale;
     }
 
     public function getCurrentPriceAttribute(){
         $now = (new DateTime())->format('Y-m-d H:i:s');
-        $sale = $this->sales()->where([['starts_at' , '>=' ,$now ],['ends_at','<',$now]])->first();
+        $sale = $this->sales()->where([['starts_at' , '<=' ,$now ],['ends_at','>',$now]])->orderBy('starts_at','DESC')->first();
         if ($sale) {
             return $sale->price_after_sale;
         }

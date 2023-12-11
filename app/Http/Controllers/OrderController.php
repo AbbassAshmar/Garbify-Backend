@@ -20,7 +20,7 @@ use Illuminate\Support\Carbon;
 
 //on hold : some problem happend when shipping / or with seller and is being solved
 //canceled : before shipping status (third), customer can cancel order and get his money back
-
+//partially canceled : before shipping status (third) , customer can cancel one or more of the products and get his money back
 
 
 

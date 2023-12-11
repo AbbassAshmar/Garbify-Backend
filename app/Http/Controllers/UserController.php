@@ -113,12 +113,12 @@ class UserController extends Controller
         }
 
         $token = $user->tokens()->first();
-        if ($token != null) $token->delete();
+        if ($token) $token->delete();
         $token =$this->create_token($user)->plainTextToken;
-        
+
         $data=[
             'user'=>$user,
-            'token'=>$token->plainTextToken,
+            'token'=>$token,
         ];
         $response_body = HelperController::getSuccessResponse($data,null);
         return response($response_body,201);

@@ -27,6 +27,10 @@ class ProductsImage extends Model
     public function size(){
         return $this->belongsTo(Size::class);
     }
+
+    //acessors
+
+    //overrides image_url attribute to include domain name and path
     public function getImageUrlAttribute(){
         return asset('/storage/productsImages/'.$this->attributes['image_url']);        
     }

@@ -56,7 +56,8 @@ Route::get("/categories", [NavbarController::class, "show"]);
 
 Route::post("/create-checkout-session",[StripeController::class, "stripeBase"])->middleware(["auth:sanctum"]);
 Route::post("/webhook", [StripeController::class,"stripeWebhookEventListener"]);
-Route::post("/orders/refunds", [StripeController::class,"refundOrder"])->middleware('auth:sanctum');
+Route::post("users/user/orders/canceled", [StripeController::class,"cancelOrder"])->middleware('auth:sanctum');
+
 // Reviews Controller Routes 
 
 Route::get("/products/{product_id}/reviews" , [ReviewController::class, "listReviewsByProduct"]);
@@ -69,6 +70,7 @@ Route::delete("/reviews/{id}", [ReviewController::class,"deleteReview"])->middle
 
 Route::get("users/user/orders", [OrderController::class, "listOrders"])->middleware(['auth:sanctum']);
 Route::get("users/user/orders/canceled", [OrderController::class,'listCanceledOrders'])->middleware(['auth:sanctum']);
+
 // Favorite Controller Routes
 
 Route::post("/favorites", [FavoriteController::class, "createFavorite"])->middleware(['auth:sanctum']);

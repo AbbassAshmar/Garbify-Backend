@@ -17,13 +17,17 @@ use App\Models\Size;
 use UnexpectedValueException;
 use Stripe\Exception\SignatureVerificationException;
 use App\Models\User;
+use Carbon\Carbon;
 use DateTime;
 use Exception;
+use Stripe\Exception\ApiErrorException;
 use Stripe\PaymentIntent;
 
 class StripeController extends Controller
 {
     function stripeWebhookEventListener(Request $request){
+        $stripe = new StripeClient(env("STRIPE_SECRET"));
+
         // This is your Stripe CLI webhook secret for testing your endpoint locally.
         $endpoint_secret = env("WEBHOOK_SECRET");
         $sig_header = $request->header("Stripe-Signature");
@@ -48,14 +52,13 @@ class StripeController extends Controller
             // get the session from the event 
             $session = $event->data->object;
 
-            // Retrieve the PaymentIntent by the PaymentIntent ID
-            $paymentIntent = PaymentIntent::retrieve($session->payment_intent);
+            
+            $line_items = $stripe->checkout->sessions->retrieve(
+                $session->id,
+                ['expand' => ['line_items','line_items.data.price.product']]
+            );
 
-            // The charges property contains the list of charges associated with the PaymentIntent
-            $charges = $paymentIntent->charges->data;
-
-            // Get the last charge id in the array
-            $charge_id = end($charges)->id;
+            return response(['items'=>$line_items],200);
 
             // Handle the event
             $address_details = $session['customer_details']['address'];
@@ -67,9 +70,10 @@ class StripeController extends Controller
             $total_cost = $session['amount_total'];
             $tax_cost =  $session['total_details']['amount_tax'];
             $shipping_cost = $session['total_details']['amount_shipping'];
+            $tax_percentage =($tax_cost * 100 ) / $total_cost ;
 
             $user_id = $session['metadata']['user_id'];
-            $products = json_decode( $session['metadata']['products'],true);
+            $products = $line_items['line_items']['data'];
             $now = (new DateTime())->format('Y-m-d H:i:s');
 
             // create a shipping_address instance 
@@ -91,14 +95,14 @@ class StripeController extends Controller
             // create an order instance 
             $order = Order::create([
                 'created_at' => $now,
-                'status' =>'paid',
+                'status' =>'Paid',
                 'total_cost' => $total_cost,
                 'tax_cost'=>$tax_cost,
                 'products_cost'=>$products_cost,
                 'user_id'=>$user_id,
                 'shipping_address_id' =>$shipping_address->id,
                 'shipping_method_id' =>ShippingMethod::where("cost", $shipping_cost)->first()->id,
-                'charge_id' => $charge_id,
+                'payment_intent_id' => $session->payment_intent, //used to refund if possible
             ]);
 
             // create order_detail instances for each product required by user 
@@ -106,34 +110,51 @@ class StripeController extends Controller
                 OrderDetail::create([
                     'created_at' =>$now,
                     'order_id' =>$order->id ,
-                    'product_id'=>$product['product_id'],
+                    'product_id'=>(int)$product['price']['product']['metadata']['id'],
                     'ordered_quantity' =>$product['quantity'],
-                    'color_id'=>Color::where('color',$product['color'])->first()->id,
-                    'size_id'=> Size::where("size",$product['size'])->first()->id,
-                    'product_total_price'=>$product['total_price']
+                    'color_id'=>Color::where('color',$product['price']['product']['metadata']['color'])->first()->id,
+                    'size_id'=> Size::where("size",$product['price']['product']['metadata']['size'])->first()->id,
+                    'amount_total'=>$product['amount_total']/ 100,
+                    'amount_tax'=> $product['amount_tax'] / 100, 
+                    'amount_subtotal'=> $product['amount_subtotal']/100,
+                    'amount_unit' => $product['price']['unit_amount'] / 100,
+                    'amount_discount' => $product['amount_discount']/100,
+                    'sale_id' => (int)$product['price']['product']['metadata']['sale_id'],
                 ]);
             }
         }
         return response(['Received unknown event type'=>$event], 200);
     }
-    
-    function refundOrder(Request $request){
+
+    function cancelProduct(Request $request){
         $order  = Order::find($request->input("order_id"));
         HelperController::checkIfNotFound($order,"Order");
 
-        //check order status 
+        $product_id = $request->input("product_id");
 
-        // refund order
+        // check if product is part of the order
+        $product_in_order = $order->orderDetails()->where('product_id' , $product_id)->first();
+        HelperController::checkIfNotFound($product_in_order,'Product');
+
+        //check order status 
+        if ($order->status != "Paid" && $order->status != "Awaiting shipment"){
+            $error = ['message' => 'Order cancelation period is over.'];
+            $response_body = HelperController::getFailedResponse($error,null);
+            return response($response_body, 400);
+        }
+
+        // refund product
         $stripe = new StripeClient(env("STRIPE_SECRET"));
         try {
             // create a refund 
             $refund = $stripe->refunds->create([
-                'charge' => $order->charge_id,
+                'payment_intent' => $order->payment_intent_id,
+                'amount' => $product_in_order->amount_total * 100
             ]);
         
             if ($refund->status === 'failed') {
                 $error = [
-                    'message'=>'Refund failed.',
+                    'message'=>'Cancelation failed.',
                     'details' => $refund->failure_reason,
                     'code' => 400, 
                 ];
@@ -141,16 +162,65 @@ class StripeController extends Controller
                 return response($response_body, 400);
             }
 
-            $data = ['action' => 'refunded'];
+            $order->update(['status'=>'Canceled','canceled_at' => Carbon::now()]);
+            $data = ['action' => 'canceled'];
             $metaData = [
                 'amount' => $refund->amount
             ];
             $response_body = HelperController::getSuccessResponse($data, $metaData);
             return response($response_body, 200);
 
-        } catch (\Stripe\Exception\ApiErrorException $e) {
+        } catch (ApiErrorException $e) {
             $error = [
-                'message'=>'Refund failed.',
+                'message'=>'Cancelation failed.',
+                'details' => $e->getMessage(),
+                'code' => 400, 
+            ];
+            $response_body = HelperController::getFailedResponse($error, null);
+            return response($response_body, 400);
+        }
+    }
+    
+    function cancelOrder(Request $request){
+        $order  = Order::find($request->input("order_id"));
+        HelperController::checkIfNotFound($order,"Order");
+
+        //check order status 
+        if ($order->status != "Paid" && $order->status != "Awaiting shipment"){
+            $error = ['message' => 'Order cancelation period is over.'];
+            $response_body = HelperController::getFailedResponse($error,null);
+            return response($response_body, 400);
+        }
+
+        // refund order
+        $stripe = new StripeClient(env("STRIPE_SECRET"));
+        try {
+            // create a refund 
+            $refund = $stripe->refunds->create([
+                'payment_intent' => $order->payment_intent_id,
+            ]);
+        
+            if ($refund->status === 'failed') {
+                $error = [
+                    'message'=>'Cancelation failed.',
+                    'details' => $refund->failure_reason,
+                    'code' => 400, 
+                ];
+                $response_body = HelperController::getFailedResponse($error, null);
+                return response($response_body, 400);
+            }
+
+            $order->update(['status'=>'Canceled','canceled_at' => Carbon::now()]);
+            $data = ['action' => 'canceled'];
+            $metaData = [
+                'amount' => $refund->amount
+            ];
+            $response_body = HelperController::getSuccessResponse($data, $metaData);
+            return response($response_body, 200);
+
+        } catch (ApiErrorException $e) {
+            $error = [
+                'message'=>'Cancelation failed.',
                 'details' => $e->getMessage(),
                 'code' => 400, 
             ];
@@ -165,18 +235,20 @@ class StripeController extends Controller
         // $products = $request->input("products");
         $products =[
             [
-                'product_id'=> 2,
+                'product_id'=> 1,
                 'color'=> 'red',
                 'quantity'=> 3,
-                'size'=> 'M 2.5 / W 4',
+                'size'=> 'M 5.5 / W 2.5',
             ],
             [
-                'product_id'=> 3,
-                'color'=> 'red',
+                'product_id'=> 2,
+                'color'=> 'blue',
                 'quantity'=> 3,
-                'size'=> 'M 2.5 / W 4',
+                'size'=> 'M 6.5 / W 3.5',
             ]
         ];
+        $metaData = $products;
+
         $shipping_options = [
             [
                 'id'=>1,
@@ -196,7 +268,27 @@ class StripeController extends Controller
 
         // include total_price (price of each product * quantity)
         $products = array_map(function($product){
-            $product['total_price']= Product::find($product['product_id'])->current_price * $product['quantity'];
+
+            $get_product = Product::find($product['product_id']);
+            HelperController::checkIfNotFound($get_product, "Product"); // check if product to be ordered exists
+
+            $get_color = $get_product->colors()->where('color', $product['color'])->first();
+            $color_error = "Color ".$product['color']. ' of '.$get_product->name;
+            HelperController::checkIfNotFound($get_color, $color_error);// check if color to be ordered exists
+
+            $get_size = $get_product->sizes()->where('size', $product['size'])->first();
+            $size_error = "Size ".$product['size']. ' of '.$get_product->name;
+            HelperController::checkIfNotFound($get_size, "Size ".$size_error);// check if size to be ordered exists
+
+            $product['product_object'] = $get_product;
+
+            $image =  $get_product->images()->where('color_id',$get_color->id)->first();
+            if(!$image) $image = $get_product->thumbnail;
+            $product['product_image']=$image->image_url;
+
+            //testing
+            $product['product_image']= ['https://cdn.thewirecutter.com/wp-content/media/2023/05/running-shoes-2048px-9718.jpg'];
+
             return $product;
         },$products);
         
@@ -223,9 +315,6 @@ class StripeController extends Controller
             $session = $stripe->checkout->sessions->create([
                 'payment_method_types'=>['card'],
                 'line_items' => array_map(function($product) use($taxes){
-                    $product_object = Product::find($product['product_id']);
-                    $product_color = Color::where("color",$product['color'])->first();
-                    $product_image = $product_object->images()->where('color_id',$product_color->id)->first();
                     return [
                         'dynamic_tax_rates' => [
                             $taxes['tax1']->id,
@@ -233,20 +322,22 @@ class StripeController extends Controller
                         ],
                         'price_data' => [
                             'currency' =>'usd',
-                            'product_data' =>[
-                                'metadata'=>[
+                            'product_data' =>[ 
+                                'name' => $product['product_object']->name,
+                                'images'=>$product['product_image'],
+                                'metadata'=>[ // additional info about the product
+                                    'id' =>$product['product_object']->id,
+                                    'sale_id' => $product['product_object']->current_sale?$product['product_object']->current_sale->id:null,
                                     'color'=>$product['color'],
                                     "size"=>$product['size']
                                 ],
-                                'name' => $product_object->name,
-                                'images'=>['https://cdn.thewirecutter.com/wp-content/media/2023/05/running-shoes-2048px-9718.jpg']
-                                // 'images=>[$product_image->url]
                             ],
-                            'unit_amount' => $product_object->current_price*100,
+                            'unit_amount' => $product['product_object']->current_price*100,
                         ],
                         'quantity'=> $product['quantity']
                     ];
                 },$products),
+            
                 'mode' => 'payment',
 
                 'success_url' => 'http://localhost:5173/checkout-successful',
@@ -254,8 +345,7 @@ class StripeController extends Controller
 
                 'metadata' => [  // stored in the payment intent to be retrieved later 
                     'user_id'=>$user->id,
-                    'token_id'=>$request->bearerToken(),
-                    'products'=> json_encode($products),
+                    'products'=> json_encode($metaData),
                 ],
 
                 'phone_number_collection' => [
@@ -287,9 +377,9 @@ class StripeController extends Controller
                     ];
                 },$shipping_options),
             ]);
-            return response(['form_url'=>$session->url]);
-        }catch (CardException $e){
-            return response(["error"=>$e->getMessage()]);
+            return response(['form_url'=>$session->url],200);
+        }catch (ApiErrorException $e){
+            return response(["error"=>$e->getMessage()],500);
         }
     }
 }
