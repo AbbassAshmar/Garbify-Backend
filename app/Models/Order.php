@@ -76,6 +76,17 @@ class Order extends Model
         return "return unavailable";
     }
 
+    public function getCanBeCanceledAttribute(){
+        // status where the order can be fully or partially canceled
+        if ($this->status == "Paid" || $this->status == "Awaiting shipment"){
+            return true;
+        }
+        return false;
+    }
+
+    public function getNumberOfUncanceledProductsAttribute(){
+        return $this->orderDetails()->where('canceled_at' , null)->count();
+    }
     //HELPERS
 
     // returns number of days since creating an order

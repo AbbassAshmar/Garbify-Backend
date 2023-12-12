@@ -20,6 +20,7 @@ class Sale extends Model
         $date = DateTime::createFromFormat('yyyy-mm-dd hh:mi:ss',$this->starts_at);
         return $this->starts_at->format('c');
     }
+
     public function getPriceAfterSaleAttribute(){
         return $this->product->price - ( $this->product->price * ($this->sale_percentage / 100));
     }

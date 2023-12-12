@@ -14,12 +14,21 @@ return new class extends Migration
         Schema::create('order_details', function (Blueprint $table) {
             $table->id();
             $table->timestamps();
+            $table->timestamp('canceled_at')->nullable();
             $table->foreignId("order_id")->constrained()->onDelete("cascade");
             $table->foreignId("product_id")->nullable()->constrained()->onDelete("set null");
             $table->integer("ordered_quantity")->default(1);
             $table->foreignId('color_id')->nullable()->constrained()->onDelete("set null");
             $table->foreignId("size_id")->nullable()->constrained()->onDelete("set null");
-            $table->integer("product_total_price")->default(0);
+
+            $table->integer("amount_total")->default(0);
+            $table->integer("amount_tax")->default(0);
+            $table->integer("amount_subtotal")->default(0);
+            $table->integer("amount_unit")->default(0);
+            $table->integer('amount_discount')->default(0);
+
+            $table->foreignId('sale_id')->nullable()->constrained()->onDelete("set null");
+
         });
     }
 

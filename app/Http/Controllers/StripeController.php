@@ -42,23 +42,43 @@ class StripeController extends Controller
             );
         } catch(UnexpectedValueException $e) {
             // Invalid payload
-            return response(['error' => $e->getMessage()] , 400);
+            $error = [
+                'message'=>'Invalid payload.',
+                'details' => $e->getMessage(),
+                'code' => 400, 
+            ];
+            $response_body = HelperController::getFailedResponse($error, null);
+            return response($response_body, 400); 
         } catch(SignatureVerificationException $e) {
             // Invalid signature
-            return response(['error' => $e->getMessage()] , 400);
+            $error = [
+                'message'=>'Invalid signature.',
+                'details' => $e->getMessage(),
+                'code' => 400, 
+            ];
+            $response_body = HelperController::getFailedResponse($error, null);
+            return response($response_body, 400); 
         }
 
         if ($event->type == "checkout.session.completed"){
             // get the session from the event 
             $session = $event->data->object;
-
             
-            $line_items = $stripe->checkout->sessions->retrieve(
-                $session->id,
-                ['expand' => ['line_items','line_items.data.price.product']]
-            );
-
-            return response(['items'=>$line_items],200);
+            //retrieve the session with extra data : line_items
+            try{
+                $line_items = $stripe->checkout->sessions->retrieve(
+                    $session->id,
+                    ['expand' => ['line_items','line_items.data.price.product']]
+                );
+            }catch(ApiErrorException $e){
+                $error = [
+                    'message'=>'An unexpected error occurd.',
+                    'details' => $e->getMessage(),
+                    'code' => 200, 
+                ];
+                $response_body = HelperController::getFailedResponse($error, null);
+                return response($response_body, 200); 
+            }
 
             // Handle the event
             $address_details = $session['customer_details']['address'];
@@ -96,18 +116,26 @@ class StripeController extends Controller
             $order = Order::create([
                 'created_at' => $now,
                 'status' =>'Paid',
-                'total_cost' => $total_cost,
-                'tax_cost'=>$tax_cost,
-                'products_cost'=>$products_cost,
+                'amount_total' => $total_cost,
+                'amount_tax'=>$tax_cost,
+                'amount_subtotal'=>$products_cost,
                 'user_id'=>$user_id,
                 'shipping_address_id' =>$shipping_address->id,
                 'shipping_method_id' =>ShippingMethod::where("cost", $shipping_cost)->first()->id,
                 'payment_intent_id' => $session->payment_intent, //used to refund if possible
+                'percentage_tax' => $tax_percentage
             ]);
 
             // create order_detail instances for each product required by user 
             foreach($products as $product){
+                $amount_discount = 0;
+                $sale_percentage = $product['price']['product']['metadata']['sale_percentage'];
+                if ($sale_percentage) {
+                    $amount_discount =((int)$sale_percentage / 100) * $product['amount_subtotal']/100;
+                }
+
                 OrderDetail::create([
+                    'canceled_at' => null,
                     'created_at' =>$now,
                     'order_id' =>$order->id ,
                     'product_id'=>(int)$product['price']['product']['metadata']['id'],
@@ -118,13 +146,81 @@ class StripeController extends Controller
                     'amount_tax'=> $product['amount_tax'] / 100, 
                     'amount_subtotal'=> $product['amount_subtotal']/100,
                     'amount_unit' => $product['price']['unit_amount'] / 100,
-                    'amount_discount' => $product['amount_discount']/100,
+                    'amount_discount' => $amount_discount,
                     'sale_id' => (int)$product['price']['product']['metadata']['sale_id'],
                 ]);
             }
         }
-        return response(['Received unknown event type'=>$event], 200);
+
+        $data = ['action'=>'Received event',];
+        $response_body = HelperController::getSuccessResponse($data, null);
+        return response($response_body, 200); 
     }
+
+    private function cancelEntireOrder(Order $order){
+        $stripe = new StripeClient(env("STRIPE_SECRET"));
+        try{
+            // create a refund 
+            $refund = $stripe->refunds->create([
+                'payment_intent' => $order->payment_intent_id,
+            ]);
+        
+            if ($refund->status === 'failed') {
+                $error = [
+                    'message'=>'Cancelation failed.',
+                    'details' => $refund->failure_reason,
+                    'code' => 400, 
+                ];
+                $response_body = HelperController::getFailedResponse($error, null);
+                return response($response_body, 400);
+            }
+
+            // update canceled_at of order and each order detail to now
+            $now = Carbon::now();
+            $order->update(['status'=>'Canceled','canceled_at' => $now]);
+            foreach($order->orderDetails()->where("canceled_at", null)->get() as $ordered_product){
+                $ordered_product->update(['canceled_at' =>  $now]);
+            }
+
+            $data = ['action' => 'canceled'];
+            $metaData = [
+                'amount_refunded' => $refund->amount,
+            ];
+            $response_body = HelperController::getSuccessResponse($data, $metaData);
+            return response($response_body, 200);   
+
+        } catch (ApiErrorException $e) {
+            $error = [
+                'message'=>'Cancelation failed.',
+                'details' => $e->getMessage(),
+                'code' => 400, 
+            ];
+            $response_body = HelperController::getFailedResponse($error, null);
+            return response($response_body, 400);
+        }
+    }
+
+    function cancelOrder(Request $request){
+        $order  = Order::find($request->input("order_id"));
+        HelperController::checkIfNotFound($order,"Order");
+
+        // check if order has already been cancleled
+        if ($order->status == 'Canceled'){
+            $error = ['message' => 'Order has already been canceled.'];
+            $response_body = HelperController::getFailedResponse($error,null);
+            return response($response_body, 400);
+        }
+
+        //check order status 
+        if (!$order->can_be_canceled){
+            $error = ['message' => 'Order cancelation period is over.'];
+            $response_body = HelperController::getFailedResponse($error,null);
+            return response($response_body, 400);
+        }
+
+        // refund order
+        return $this->cancelEntireOrder($order);
+    }  
 
     function cancelProduct(Request $request){
         $order  = Order::find($request->input("order_id"));
@@ -136,11 +232,23 @@ class StripeController extends Controller
         $product_in_order = $order->orderDetails()->where('product_id' , $product_id)->first();
         HelperController::checkIfNotFound($product_in_order,'Product');
 
+        // check if product has already been canceled 
+        if ($product_in_order->canceled_at){
+            $error = ['message' => 'Product has already been canceled.'];
+            $response_body = HelperController::getFailedResponse($error,null);
+            return response($response_body, 400);
+        }
+
         //check order status 
-        if ($order->status != "Paid" && $order->status != "Awaiting shipment"){
+        if (!$order->can_be_canceled){
             $error = ['message' => 'Order cancelation period is over.'];
             $response_body = HelperController::getFailedResponse($error,null);
             return response($response_body, 400);
+        }
+
+        // check if product to be canceled is the last in the order to cancel the whole order 
+        if ($order->number_of_uncanceled_products == 1){
+            return $this->cancelEntireOrder($order);
         }
 
         // refund product
@@ -162,10 +270,13 @@ class StripeController extends Controller
                 return response($response_body, 400);
             }
 
-            $order->update(['status'=>'Canceled','canceled_at' => Carbon::now()]);
-            $data = ['action' => 'canceled'];
+            $order->update(['status'=>'Partially canceled']);
+            $product_in_order->update(['canceled_at' , Carbon::now()]);
+
+            $data = ['action' => 'partially canceled'];
             $metaData = [
-                'amount' => $refund->amount
+                'amount_refunded' => $refund->amount,
+                "canceled_product"  => $product_in_order->product->name
             ];
             $response_body = HelperController::getSuccessResponse($data, $metaData);
             return response($response_body, 200);
@@ -181,58 +292,10 @@ class StripeController extends Controller
         }
     }
     
-    function cancelOrder(Request $request){
-        $order  = Order::find($request->input("order_id"));
-        HelperController::checkIfNotFound($order,"Order");
-
-        //check order status 
-        if ($order->status != "Paid" && $order->status != "Awaiting shipment"){
-            $error = ['message' => 'Order cancelation period is over.'];
-            $response_body = HelperController::getFailedResponse($error,null);
-            return response($response_body, 400);
-        }
-
-        // refund order
-        $stripe = new StripeClient(env("STRIPE_SECRET"));
-        try {
-            // create a refund 
-            $refund = $stripe->refunds->create([
-                'payment_intent' => $order->payment_intent_id,
-            ]);
-        
-            if ($refund->status === 'failed') {
-                $error = [
-                    'message'=>'Cancelation failed.',
-                    'details' => $refund->failure_reason,
-                    'code' => 400, 
-                ];
-                $response_body = HelperController::getFailedResponse($error, null);
-                return response($response_body, 400);
-            }
-
-            $order->update(['status'=>'Canceled','canceled_at' => Carbon::now()]);
-            $data = ['action' => 'canceled'];
-            $metaData = [
-                'amount' => $refund->amount
-            ];
-            $response_body = HelperController::getSuccessResponse($data, $metaData);
-            return response($response_body, 200);
-
-        } catch (ApiErrorException $e) {
-            $error = [
-                'message'=>'Cancelation failed.',
-                'details' => $e->getMessage(),
-                'code' => 400, 
-            ];
-            $response_body = HelperController::getFailedResponse($error, null);
-            return response($response_body, 400);
-        }
-    }  
-
 
     function stripeBase(Request $request){
         $user = $request->user();
-        // $products = $request->input("products");
+        $products = $request->input("products");
         $products =[
             [
                 'product_id'=> 1,
@@ -328,6 +391,7 @@ class StripeController extends Controller
                                 'metadata'=>[ // additional info about the product
                                     'id' =>$product['product_object']->id,
                                     'sale_id' => $product['product_object']->current_sale?$product['product_object']->current_sale->id:null,
+                                    'sale_percentage'=>$product['product_object']->current_sale? ($product['product_object']->current_sale->sale_percentage)  :null,
                                     'color'=>$product['color'],
                                     "size"=>$product['size']
                                 ],
@@ -345,7 +409,6 @@ class StripeController extends Controller
 
                 'metadata' => [  // stored in the payment intent to be retrieved later 
                     'user_id'=>$user->id,
-                    'products'=> json_encode($metaData),
                 ],
 
                 'phone_number_collection' => [
@@ -364,22 +427,31 @@ class StripeController extends Controller
                             ],
                             'display_name' => $method['name'],
                             'delivery_estimate' => [
-                            'minimum' => [
-                                'unit' => 'business_day',
-                                'value' => $method['min_days'],
-                            ],
-                            'maximum' => [
-                                'unit' => 'business_day',
-                                'value' => $method['max_days'],
-                            ],
+                                'minimum' => [
+                                    'unit' => 'business_day',
+                                    'value' => $method['min_days'],
+                                ],
+                                'maximum' => [
+                                    'unit' => 'business_day',
+                                    'value' => $method['max_days'],
+                                ],
                             ],
                         ],
                     ];
                 },$shipping_options),
             ]);
-            return response(['form_url'=>$session->url],200);
+
+            $data = ['form_url'=>$session->url];
+            $response_body = HelperController::getSuccessResponse($data, null);
+            return response($response_body,200);
         }catch (ApiErrorException $e){
-            return response(["error"=>$e->getMessage()],500);
+            $error = [
+                'message'=>'Cancelation failed.',
+                'details' => $e->getMessage(),
+                'code' => 500, 
+            ];
+            $response_body = HelperController::getFailedResponse($error, null);
+            return response($response_body, 500);
         }
     }
 }

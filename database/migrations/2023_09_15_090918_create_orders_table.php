@@ -15,13 +15,16 @@ return new class extends Migration
             $table->id();
             $table->timestamps();
             $table->text("status");
-            $table->integer("total_cost");
-            $table->integer("tax_cost")->default(0);
-            $table->integer("products_cost")->default(0);
             $table->dateTime("canceled_at")->nullable();
             $table->foreignId("shipping_address_id")->nullable()->constrained()->onDelete("set Null");
             $table->foreignId("user_id")->nullable()->constrained()->onDelete("set Null");
             $table->foreignId("shipping_method_id")->nullable()->constrained()->onDelete("set Null");
+
+            $table->integer("amount_total")->default(0);
+            $table->integer("amount_tax")->default(0);
+            $table->integer("amount_subtotal")->default(0);
+            $table->decimal("percentage_tax",5,2,true)->default(0.0);
+            $table->text("payment_intent_id");
         });
     }
 
