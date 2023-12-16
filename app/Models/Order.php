@@ -13,13 +13,15 @@ class Order extends Model
     protected $fillable=[
         'created_at',
         'status',
-        'total_cost',
-        'tax_cost',
-        'products_cost',
+        'amount_total',
+        'amount_tax',
+        'amount_subtotal',
+        'percentage_tax',
         'canceled_at',
         'user_id',
         'shipping_address_id',
         'shipping_method_id',
+        'payment_intent_id'
     ];
 
     public function user(){

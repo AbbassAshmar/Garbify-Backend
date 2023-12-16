@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('sales', function (Blueprint $table) {
             $table->id();
             $table->timestamps();
-            $table->integer("quantity",false,true);
+            $table->integer("quantity",false,true)->nullable();
             $table->decimal("sale_percentage",5,2,true)->default(0.0);
             $table->foreignId("product_id")->nullable()->onDelete("set null")->constrained();
             $table->datetime("ends_at");

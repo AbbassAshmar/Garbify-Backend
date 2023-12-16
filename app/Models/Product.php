@@ -53,11 +53,11 @@ class Product extends Model
     }
 
     public function orderDetails(){
-        return $this->hasMany(OrderDetails::class);
+        return $this->hasMany(OrderDetail::class);
     }
 
     public function favorites(){
-        return $this->hasMany(favorites::class);
+        return $this->hasMany(Favorite::class);
     }
 
     public function getThumbnailAttribute(){
@@ -130,7 +130,9 @@ class Product extends Model
     public function getAverageRatingsAttribute(){
         return $this->reviews->avg("product_rating");
     }
+
     public function getReviewsCountAttribute(){
         return $this->reviews->count();
     }
+
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\ProductOutOfStockException;
 use App\Models\Product;
 use GuzzleHttp\Psr7\Message;
 use Illuminate\Http\Request;
@@ -11,6 +12,7 @@ use Stripe\Webhook;
 use App\Models\Color;
 use App\Models\Order;
 use App\Models\OrderDetail;
+use App\Models\Sale;
 use App\Models\ShippingAddress;
 use App\Models\ShippingMethod;
 use App\Models\Size;
@@ -20,14 +22,112 @@ use App\Models\User;
 use Carbon\Carbon;
 use DateTime;
 use Exception;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Stripe\Exception\ApiErrorException;
 use Stripe\PaymentIntent;
 
 class StripeController extends Controller
 {
-    function stripeWebhookEventListener(Request $request){
-        $stripe = new StripeClient(env("STRIPE_SECRET"));
+    private $stripe;
 
+    // instantiated at AppServiceProvider 
+    function __construct(StripeClient $stripe){
+        $this->$stripe = $stripe;
+    }
+    
+    protected function createShippingAddress($session,$user_id){
+        $address_details = $session['customer_details']['address'];
+        $recipient_name =  $session['customer_details']['name'];
+        $recipient_phone_number = $session['customer_details']['phone'];
+        $recipient_email = $session['customer_details']['email'];
+        $now = (new DateTime())->format('Y-m-d H:i:s');
+
+        $shipping_address = ShippingAddress::create([
+            'user_id' => $user_id,
+            'country' =>$address_details['country'],
+            'city' =>$address_details['city'],
+            'state'=>$address_details['state'],
+            'address_line_1'=>$address_details['line1'],
+            'address_line_2'=>$address_details['line2'],
+            'postal_code'=>$address_details['postal_code'],
+            'recipient_name'=>$recipient_name,
+            'email'=>$recipient_email,
+            'phone_number' =>$recipient_phone_number,
+            'name'=>$recipient_name,
+            'created_at' => $now,
+        ]);
+
+        return $shipping_address;
+    }
+
+    protected function createOrder($session,$shipping_address_id,$user_id){
+        $amount_subtotal = $session['amount_subtotal'];
+        $amount_total = $session['amount_total'];
+        $amount_tax =  $session['total_details']['amount_tax'];
+
+        $shipping_cost = $session['total_details']['amount_shipping'];
+        $tax_percentage =($amount_tax * 100 ) / $amount_total ; 
+        $now = (new DateTime())->format('Y-m-d H:i:s');
+
+        $order = Order::create([
+            'payment_intent_id' => $session['payment_intent'], //used to refund if possible
+            'created_at' => $now,
+            'status' =>'Paid',
+            'amount_total' => $amount_total,
+            'amount_tax'=>$amount_tax,
+            'amount_subtotal'=>$amount_subtotal,
+            'user_id'=>$user_id,
+            'shipping_address_id' =>$shipping_address_id,
+            'shipping_method_id' =>ShippingMethod::where("cost", $shipping_cost)->first()->id,
+            'percentage_tax' => $tax_percentage
+        ]);
+
+        return $order;
+    }
+
+    protected function createOrderDetails($products , $order_id){
+        $now = (new DateTime())->format('Y-m-d H:i:s');
+
+        // create order_detail instances for each product required by user 
+        foreach($products as $product){
+            $product_id = (int)$product['price']['product']['metadata']['id'];
+            $product_obj = Product::find($product_id);
+            HelperController::checkIfNotFound($product_obj,"Product");
+
+            //update product quantity 
+            $product_obj->update(['quantity' => $product_obj->quantity - $product['quantity']]);
+
+            //update sale quantity
+            $amount_discount = 0;
+            $sale_id = $product['price']['product']['metadata']['sale_id'];
+            if ($sale_id){
+                $sale_obj = Sale::find((int)$sale_id);
+                HelperController::checkIfNotFound($sale_id, "Sale");
+                $sale_percentage = $sale_obj->sale_percentage;
+                $amount_discount =($sale_percentage / 100) * $product['amount_subtotal']/100;
+                $sale_obj->update(['quantity' => $sale_obj->quantity -  $product['quantity']]);
+            }
+
+            OrderDetail::create([
+                'canceled_at' => null,
+                'created_at' =>$now,
+                'order_id' =>$order_id ,
+                'product_id'=>$product_obj->id,
+                'ordered_quantity' =>$product['quantity'],
+                'color_id'=>Color::where('color',$product['price']['product']['metadata']['color'])->first()->id,
+                'size_id'=> Size::where("size",$product['price']['product']['metadata']['size'])->first()->id,
+                'amount_total'=>$product['amount_total']/ 100,
+                'amount_tax'=> $product['amount_tax'] / 100, 
+                'amount_subtotal'=> $product['amount_subtotal']/100,
+                'amount_unit' => $product['price']['unit_amount'] / 100,
+                'amount_discount' => $amount_discount,
+                'sale_id' => $sale_id,
+            ]);
+        }
+    }
+
+    function stripeWebhookEventListener(Request $request){
         // This is your Stripe CLI webhook secret for testing your endpoint locally.
         $endpoint_secret = env("WEBHOOK_SECRET");
         $sig_header = $request->header("Stripe-Signature");
@@ -63,14 +163,27 @@ class StripeController extends Controller
         if ($event->type == "checkout.session.completed"){
             // get the session from the event 
             $session = $event->data->object;
-            
+
             //retrieve the session with extra data : line_items
-            try{
-                $line_items = $stripe->checkout->sessions->retrieve(
-                    $session->id,
-                    ['expand' => ['line_items','line_items.data.price.product']]
-                );
-            }catch(ApiErrorException $e){
+            $line_items = $this->stripe->checkout->sessions->retrieve(
+                $session->id,
+                ['expand' => ['line_items','line_items.data.price.product']]
+            );
+
+            // Handle the event
+            $user_id = $session['metadata']['user_id'];
+            $products = $line_items['line_items']['data'];
+
+            try {
+                DB::beginTransaction();
+
+                $shipping_address = $this->createShippingAddress($session,$user_id);
+                $order = $this->createOrder($session,$shipping_address->id,$user_id);
+                $this->createOrderDetails($products,$order->id);
+
+                DB::commit();
+            }catch(Exception $e){
+                DB::rollBack();
                 $error = [
                     'message'=>'An unexpected error occurd.',
                     'details' => $e->getMessage(),
@@ -79,89 +192,17 @@ class StripeController extends Controller
                 $response_body = HelperController::getFailedResponse($error, null);
                 return response($response_body, 200); 
             }
-
-            // Handle the event
-            $address_details = $session['customer_details']['address'];
-            $recipient_name =  $session['customer_details']['name'];
-            $recipient_phone_number = $session['customer_details']['phone'];
-            $recipient_email = $session['customer_details']['email'];
-
-            $products_cost = $session['amount_subtotal'];
-            $total_cost = $session['amount_total'];
-            $tax_cost =  $session['total_details']['amount_tax'];
-            $shipping_cost = $session['total_details']['amount_shipping'];
-            $tax_percentage =($tax_cost * 100 ) / $total_cost ;
-
-            $user_id = $session['metadata']['user_id'];
-            $products = $line_items['line_items']['data'];
-            $now = (new DateTime())->format('Y-m-d H:i:s');
-
-            // create a shipping_address instance 
-            $shipping_address = ShippingAddress::create([
-                'user_id' => $user_id,
-                'country' =>$address_details['country'],
-                'city' =>$address_details['city'],
-                'state'=>$address_details['state'],
-                'address_line_1'=>$address_details['line1'],
-                'address_line_2'=>$address_details['line2'],
-                'postal_code'=>$address_details['postal_code'],
-                'recipient_name'=>$recipient_name,
-                'email'=>$recipient_email,
-                'phone_number' =>$recipient_phone_number,
-                'name'=>$recipient_name,
-                'created_at' => $now,
-            ]);
-
-            // create an order instance 
-            $order = Order::create([
-                'created_at' => $now,
-                'status' =>'Paid',
-                'amount_total' => $total_cost,
-                'amount_tax'=>$tax_cost,
-                'amount_subtotal'=>$products_cost,
-                'user_id'=>$user_id,
-                'shipping_address_id' =>$shipping_address->id,
-                'shipping_method_id' =>ShippingMethod::where("cost", $shipping_cost)->first()->id,
-                'payment_intent_id' => $session->payment_intent, //used to refund if possible
-                'percentage_tax' => $tax_percentage
-            ]);
-
-            // create order_detail instances for each product required by user 
-            foreach($products as $product){
-                $amount_discount = 0;
-                $sale_percentage = $product['price']['product']['metadata']['sale_percentage'];
-                if ($sale_percentage) {
-                    $amount_discount =((int)$sale_percentage / 100) * $product['amount_subtotal']/100;
-                }
-
-                OrderDetail::create([
-                    'canceled_at' => null,
-                    'created_at' =>$now,
-                    'order_id' =>$order->id ,
-                    'product_id'=>(int)$product['price']['product']['metadata']['id'],
-                    'ordered_quantity' =>$product['quantity'],
-                    'color_id'=>Color::where('color',$product['price']['product']['metadata']['color'])->first()->id,
-                    'size_id'=> Size::where("size",$product['price']['product']['metadata']['size'])->first()->id,
-                    'amount_total'=>$product['amount_total']/ 100,
-                    'amount_tax'=> $product['amount_tax'] / 100, 
-                    'amount_subtotal'=> $product['amount_subtotal']/100,
-                    'amount_unit' => $product['price']['unit_amount'] / 100,
-                    'amount_discount' => $amount_discount,
-                    'sale_id' => (int)$product['price']['product']['metadata']['sale_id'],
-                ]);
-            }
         }
-
+        
         $data = ['action'=>'Received event',];
         $response_body = HelperController::getSuccessResponse($data, null);
         return response($response_body, 200); 
     }
 
     private function cancelEntireOrder(Order $order){
-        $stripe = new StripeClient(env("STRIPE_SECRET"));
         try{
             // create a refund 
-            $refund = $stripe->refunds->create([
+            $refund = $this->stripe->refunds->create([
                 'payment_intent' => $order->payment_intent_id,
             ]);
         
@@ -252,10 +293,8 @@ class StripeController extends Controller
         }
 
         // refund product
-        $stripe = new StripeClient(env("STRIPE_SECRET"));
         try {
-            // create a refund 
-            $refund = $stripe->refunds->create([
+            $refund = $this->stripe->refunds->create([
                 'payment_intent' => $order->payment_intent_id,
                 'amount' => $product_in_order->amount_total * 100
             ]);
@@ -296,42 +335,9 @@ class StripeController extends Controller
     function stripeBase(Request $request){
         $user = $request->user();
         $products = $request->input("products");
-        $products =[
-            [
-                'product_id'=> 1,
-                'color'=> 'red',
-                'quantity'=> 3,
-                'size'=> 'M 5.5 / W 2.5',
-            ],
-            [
-                'product_id'=> 2,
-                'color'=> 'blue',
-                'quantity'=> 3,
-                'size'=> 'M 6.5 / W 3.5',
-            ]
-        ];
-        $metaData = $products;
+        $shipping_options = ShippingMethod::all()->all();
 
-        $shipping_options = [
-            [
-                'id'=>1,
-                "name"=>"Free shipping",
-                "cost" =>0,
-                "min_days"=>6,
-                'max_days' =>8
-            ],
-            [
-                'id'=>2,
-                "name"=>"15$ shipping",
-                "cost" =>15,
-                "min_days"=>4,
-                'max_days' =>6
-            ]
-        ];
-
-        // include total_price (price of each product * quantity)
         $products = array_map(function($product){
-
             $get_product = Product::find($product['product_id']);
             HelperController::checkIfNotFound($get_product, "Product"); // check if product to be ordered exists
 
@@ -343,31 +349,35 @@ class StripeController extends Controller
             $size_error = "Size ".$product['size']. ' of '.$get_product->name;
             HelperController::checkIfNotFound($get_size, "Size ".$size_error);// check if size to be ordered exists
 
+            $new_quantity = $get_product-> quantity - $product['quantity']; // check for sufficient quantity
+            if ($new_quantity < 0) {
+                throw ProductOutOfStockException::insufficientStock($get_product->name);
+            }
+
+            // check for sale quantity if present // user can order max the sale quantity
+            if ($get_product->current_sale && !$get_product->current_sale->checkIfQuantitySufficient($product['quantity'])){
+                throw ProductOutOfStockException::insufficientStock($get_product->name);
+            }
+
             $product['product_object'] = $get_product;
 
             $image =  $get_product->images()->where('color_id',$get_color->id)->first();
             if(!$image) $image = $get_product->thumbnail;
             $product['product_image']=$image->image_url;
 
-            //testing
-            $product['product_image']= ['https://cdn.thewirecutter.com/wp-content/media/2023/05/running-shoes-2048px-9718.jpg'];
-
             return $product;
         },$products);
         
-        $stripe_key = env("STRIPE_SECRET");
-        // $shipping_options = ShippingMethod::all()->all();
         try{
-            $stripe  = new StripeClient($stripe_key);
             $taxes = [
-                'tax1' => $stripe->taxRates->create([
+                'tax1' => $this->stripe->taxRates->create([
                     'display_name' => 'Sales Tax',
                     'inclusive' => false,
                     'percentage' => 11,
                     'country' => 'SE',
                     'description' => 'SE Sales Tax',
                 ]),
-                'tax2' =>$stripe->taxRates->create([
+                'tax2' =>$this->stripe->taxRates->create([
                     'display_name' => 'Sales Tax',
                     'inclusive' => false,
                     'percentage' => 22,
@@ -375,7 +385,7 @@ class StripeController extends Controller
                     'description' => 'DK Sales Tax',
                 ])  
             ];
-            $session = $stripe->checkout->sessions->create([
+            $session = $this->stripe->checkout->sessions->create([
                 'payment_method_types'=>['card'],
                 'line_items' => array_map(function($product) use($taxes){
                     return [
@@ -391,7 +401,7 @@ class StripeController extends Controller
                                 'metadata'=>[ // additional info about the product
                                     'id' =>$product['product_object']->id,
                                     'sale_id' => $product['product_object']->current_sale?$product['product_object']->current_sale->id:null,
-                                    'sale_percentage'=>$product['product_object']->current_sale? ($product['product_object']->current_sale->sale_percentage)  :null,
+                                    'sale_percentage'=>$product['product_object']->current_sale? ($product['product_object']->current_sale->sale_percentage):null,
                                     'color'=>$product['color'],
                                     "size"=>$product['size']
                                 ],

@@ -168,7 +168,6 @@ class ProductController extends Controller{
         $price = $request->input("price");
         $categories= $request->input("categories") ?$request->input("categories"):[];
         $sort_by = $request->input("sort_by");
-        // dd($request->input("sort_by"));
         $pageLimit = ['page'=>$request->input("page"),'limit'=>$request->input("limit")];
         $sales = $request->input("sales");
         $new_arrivals = $request->input("new-arrivals");

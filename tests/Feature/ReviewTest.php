@@ -436,7 +436,7 @@ class ReviewTest extends TestCase
         $img1 = UploadedFile::fake()->image('test_image_1.jpg');
         $img2 = UploadedFile::fake()->image('test_image_2.jpg');
         $img3 = UploadedFile::fake()->image('test_image_3.jpg');
-
+        
         $body = [
             "product_id" => $this->product_1->id,
             "text" => "nice material and the size is perfect",

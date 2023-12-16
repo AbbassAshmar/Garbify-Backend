@@ -88,6 +88,18 @@ class Handler extends ExceptionHandler
             return response($response_body,404);
         });
 
+        // for transaction failure exceptions 
+        $this->renderable(function(ProductOutOfStockException $e, Request $request){
+            $error = [
+                "message"=>$e->getMessage(),
+                'code'=>400
+            ];
+            $response_body = HelperController::getFailedResponse($error,null);
+            return response($response_body,400);
+        });
+
+        
+
 
 
     }
