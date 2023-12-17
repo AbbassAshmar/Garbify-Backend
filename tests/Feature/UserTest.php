@@ -34,10 +34,10 @@ class UserTest extends TestCase
     {
         $this->assertEmpty(FavoritesList::all());
         $data = [
-            "username" => "test" , 
-            "email" => "test@gmail.com", 
-            "password"  => "acccppddd8",
-            "confirm_password"  => "acccppddd8"
+            "name" => "test" , 
+            "email" => "test123@gmail.com", 
+            "password"  => "AaskfaA34acccppddd8",
+            "confirm_password"  => "AaskfaA34acccppddd8",
         ];
         $request = $this->postJson("/api/register",$data);
         $request->assertCreated();
@@ -57,10 +57,10 @@ class UserTest extends TestCase
     public function test_register_email_already_used():void
     {
         $data = [
-            "username" => "test" , 
+            "name" => "test" , 
             "email" => "User2@gmail.com", 
-            "password"  => "acccppddd8",
-            "confirm_password"  => "acccppddd8"
+            "password"  => "AaskfaA34acccppddd8",
+            "confirm_password"  => "AaskfaA34acccppddd8",
         ];
         $request = $this->postJson("/api/register",$data);
         $request->assertBadRequest();
@@ -100,15 +100,15 @@ class UserTest extends TestCase
 
         $headers = ["Authorization" => "Bearer " . $superAdminToken];
         $request_data = [
-            "username" => "accc" , 
+            "name" => "accc" , 
             "email" => "accc@gmail.com", 
-            "password"  => "acccppddd8",
-            "confirm_password"  => "acccppddd8"
+            "password"  => "AaskfaA34acccppddd8",
+            "confirm_password"  => "AaskfaA34acccppddd8",
         ];
 
         $request = $this->postJson("/api/register/admin",$request_data,$headers);
-        $request->assertStatus(201);
         $request->assertJsonFragment(['email' =>"accc@gmail.com",]);
+        $request->assertCreated();
         $request->assertJsonStructure([
             'error',
             'metadata',
@@ -234,8 +234,8 @@ class UserTest extends TestCase
         $headers = ["Authorization" => "Bearer ".$this->token_1];
         $body = [
             "name" => "new_name",
-            "password" => "Newpass123",
-            "confirm_password" => "Newpass123",
+            "password" => "Newpass123456",
+            "confirm_password" => "Newpass123456",
             'old_password'=> 'User1password'
         ];
         $request = $this->patchJson("/api/users/user",$body, $headers);
@@ -243,7 +243,7 @@ class UserTest extends TestCase
 
         $request->assertOk();
         $this->assertEquals($this->user_1->name , 'new_name');
-        $this->assertTrue(Hash::check("Newpass123",$this->user_1->password));
+        $this->assertTrue(Hash::check("Newpass123456",$this->user_1->password));
     }
 
 

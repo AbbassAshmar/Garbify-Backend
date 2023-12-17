@@ -104,7 +104,6 @@ class HelperTest {
         
         // create products 
         $product_1 = Product::create([
-            // 'id' =>2000,
             'name'=>'air force' ,
             'quantity'=>322 , 
             'category_id' => $category->id,
@@ -114,7 +113,6 @@ class HelperTest {
             'created_at' => Carbon::now()
         ]);
         $product_2 = Product::create([
-            // 'id' =>3000,
             'name'=>'Jordan 4' ,
             'quantity'=>322 , 
             'category_id' => $category->id,
@@ -124,7 +122,6 @@ class HelperTest {
             'created_at' => Carbon::now()
         ]);
         $product_3 = Product::create([
-            // 'id' =>4000,
             'name'=>'air force 2' ,
             'quantity'=>200, 
             'category_id' => $category->id,

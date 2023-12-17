@@ -35,7 +35,7 @@ class OrderController extends Controller
 
         // get orders of user
         $user = $request->user();
-        $orders = $user->orders()->where("canceled_at" , null);
+        $orders = $user->orders()->where("orders.canceled_at" , null);
 
         // search by product name if q is provided 
         if ($search){

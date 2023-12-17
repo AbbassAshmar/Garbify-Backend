@@ -94,17 +94,20 @@ class OrderTest extends TestCase
         
         // create orders   
         //user not canceled order      
-        $order_1 = Order::create(["status"=>"paid",
-            "total_cost"=>300,
-            "tax_cost"=>30,
-            "products_cost"=>255,
+        $order_1 = Order::create([
+            "status"=>"Paid",
+            'amount_total' =>300,
+            'amount_tax'=>30,
+            'amount_subtotal'=>255,
             "user_id"=>$this->user_1->id,
             "shipping_address_id"=>$shipping_address->id,
             "shipping_method_id"=>$shipping_method->id,
+            'payment_intent_id' =>"jskldfjklswr3423",
+            'percentage_tax' => 10
         ]);
         //user canceled order
         $order_2 = Order::create([
-            "status"=>"cancelled",
+            "status"=>"Cancelled",
             'canceled_at' =>Carbon::now()->addDays(1),
             "total_cost"=>145,
             "tax_cost"=>30,
@@ -112,88 +115,136 @@ class OrderTest extends TestCase
             "user_id"=>$this->user_1->id,
             "shipping_address_id"=>$shipping_address->id,
             "shipping_method_id"=>$shipping_method->id,
+            'payment_intent_id' =>"32094eriwuri324",
+            'amount_total' =>145,
+            'amount_tax'=>30,
+            'amount_subtotal'=>100,
+            'percentage_tax' => 20,
         ]);
+
         // user_2 order
         $order_3 = Order::create([
             'created_at' =>(new Carbon("2019-09-05")),
-            "status"=>"paid",
-            "total_cost"=>100,
-            "tax_cost"=>30,
-            "products_cost"=>55,
+            "status"=>"Paid",
             "user_id"=>$this->user_2->id,
             "shipping_address_id"=>$shipping_address_2->id,
             "shipping_method_id"=>$shipping_method->id,
+            "amount_total"=>100,
+            "amount_tax"=>30,
+            "amount_subtotal"=>55,
+            'percentage_tax' => 20,
+            'payment_intent_id' =>"3j4ijojewri324",
         ]);
         //user_2 second order
         $order_4 = Order::create([
             'created_at' =>(new Carbon("2022-09-05")),
-            "status"=>"paid",
-            "total_cost"=>165,
-            "tax_cost"=>40,
-            "products_cost"=>110,
+            "status"=>"Paid",
+            "amount_total"=>165,
+            "amount_tax"=>40,
+            "amount_subtotal"=>110,
             "user_id"=>$this->user_2->id,
             "shipping_address_id"=>$shipping_address_2->id,
             "shipping_method_id"=>$shipping_method->id,
+            'percentage_tax' => 15,
+            'payment_intent_id' =>"3j4ijwerojewri324",
         ]);
         //user_2 third order
         $order_5 = Order::create([
             'created_at' =>(new Carbon("2023-09-05")),
-            "status"=>"paid",
-            "total_cost"=>175,
-            "tax_cost"=>40,
-            "products_cost"=>110,
+            "status"=>"Paid",
+            "amount_total"=>175,
+            "amount_tax"=>40,
+            "amount_subtotal"=>110,
             "user_id"=>$this->user_2->id,
             "shipping_address_id"=>$shipping_address_2->id,
             "shipping_method_id"=>$shipping_method->id,
+            'percentage_tax' => 10,
+            'payment_intent_id' =>"3j4ijwjfeerojewri324",
         ]);
         //create order_details for each order (represent products)
         $order_detail_1 = OrderDetail::create([
+            'canceled_at' => null,
             "order_id"=>$order_1->id,
             "product_id"=>$this->product_1->id,
             "ordered_quantity" => 2,
             "color_id"=>$color_1->id,
             "size_id" =>$size_1->id,
-            'product_total_price' => 200
+            'amount_total'=> 220,
+            'amount_tax'=> 20, 
+            'amount_subtotal'=>200,
+            'amount_unit' => 100,
+            'amount_discount' => 0,
+            'sale_id' => null,
         ]);
         $order_detail_2 = OrderDetail::create([
+            'canceled_at' => null,
             "order_id"=>$order_1->id,
             "product_id"=>$this->product_2->id,
             "ordered_quantity" => 1,
             "color_id"=>$color_1->id,
             "size_id" =>$size_1->id,
-            'product_total_price' => 55
+            'amount_total'=> 120,
+            'amount_tax'=> 10, 
+            'amount_subtotal'=>110,
+            'amount_unit' => 55,
+            'amount_discount' => 0,
+            'sale_id' => null,
         ]);
-        $order_detail_3 = OrderDetail::create([
+        OrderDetail::create([
             "order_id"=>$order_2->id,
             "product_id"=>$this->product_2->id,
             "ordered_quantity" => 1,
             "color_id"=>$color_1->id,
             "size_id" =>$size_1->id,
-            'product_total_price' => 55
+            'amount_total'=> 60,
+            'amount_tax'=> 5, 
+            'amount_subtotal'=>55,
+            'amount_unit' => 55,
+            'amount_discount' => 0,
+            'sale_id' => null,
+            'canceled_at' => null,
         ]);
-        $order_detail_4 = OrderDetail::create([
+        OrderDetail::create([
             "order_id"=>$order_3->id,
             "product_id"=>$this->product_1->id,
             "ordered_quantity" => 1,
             "color_id"=>$color_1->id,
             "size_id" =>$size_1->id,
-            'product_total_price' => 100
+            'amount_total'=> 110,
+            'amount_tax'=> 10, 
+            'amount_subtotal'=>100,
+            'amount_unit' => 100,
+            'amount_discount' => 0,
+            'sale_id' => null,
+            'canceled_at' => null,
         ]);
-        $order_detail_5 = OrderDetail::create([
+        OrderDetail::create([
             "order_id"=>$order_4->id,
             "product_id"=>$this->product_2->id,
             "ordered_quantity" => 2,
             "color_id"=>$color_1->id,
             "size_id" =>$size_1->id,
-            'product_total_price' => 110
+            'amount_total'=> 120,
+            'amount_tax'=> 10, 
+            'amount_subtotal'=>110,
+            'amount_unit' => 55,
+            'amount_discount' => 0,
+            'sale_id' => null,
+            'canceled_at' => null,
         ]);
-        $order_detail_6= OrderDetail::create([
+        OrderDetail::create([
             "order_id"=>$order_5->id,
             "product_id"=>$product_3->id,
             "ordered_quantity" => 1,
             "color_id"=>$color_1->id,
             "size_id" =>$size_1->id,
-            'product_total_price' => 55
+            'amount_total'=> 55,
+            'amount_tax'=> 0, 
+            'amount_subtotal'=>55,
+            'amount_unit' => 55,
+            'amount_discount' => 0,
+            'sale_id' => null,
+            'canceled_at' => null,        
         ]);
         
         $this->order_1 = $order_1;
@@ -256,7 +307,7 @@ class OrderTest extends TestCase
     public function test_list_orders_sort_by_total_cost_DESC()
     {        
         $headers = ["Authorization" => "Bearer " . $this->token_2];
-        $request = $this->getJson("/api/users/user/orders?sort-by=total_cost-DESC",$headers);
+        $request = $this->getJson("/api/users/user/orders?sort-by=amount_total-DESC",$headers);
         $request->assertOk();
         $data = [
             'orders'=>[
@@ -279,7 +330,7 @@ class OrderTest extends TestCase
     public function test_list_orders_sort_by_total_cost_ASC()
     {
         $headers = ["Authorization" => "Bearer " . $this->token_2];
-        $request = $this->getJson("/api/users/user/orders?sort+by=total_cost+ASC",$headers);
+        $request = $this->getJson("/api/users/user/orders?sort+by=amount_total+ASC",$headers);
         $request->assertOk();
         $data = [
             'orders'=>[
