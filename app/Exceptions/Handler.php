@@ -3,11 +3,13 @@
 namespace App\Exceptions;
 
 use App\Http\Controllers\HelperController;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Throwable;
 use Spatie\Permission\Exceptions\UnauthorizedException;
 use Symfony\Component\HttpFoundation\Request;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class Handler extends ExceptionHandler
 {
@@ -58,7 +60,7 @@ class Handler extends ExceptionHandler
             return response($response_body, 400);
         });
 
-        // for splatije permission errors UnauthorizedException
+        // for spatie permission errors UnauthorizedException
         $this->renderable(function(UnauthorizedException $e, Request $request){
             $error = [
                 'message'=>'You do not have the required authorization.',
@@ -78,7 +80,7 @@ class Handler extends ExceptionHandler
             return response($response_body, 500);
         });
 
-        // for transaction failure exceptions 
+        // for resource missing exceptions 
         $this->renderable(function(ResourceNotFoundException $e, Request $request){
             $error = [
                 "message"=>$e->getMessage(),
@@ -88,7 +90,7 @@ class Handler extends ExceptionHandler
             return response($response_body,404);
         });
 
-        // for transaction failure exceptions 
+        // for product out of stock  exceptions 
         $this->renderable(function(ProductOutOfStockException $e, Request $request){
             $error = [
                 "message"=>$e->getMessage(),
@@ -98,11 +100,24 @@ class Handler extends ExceptionHandler
             return response($response_body,400);
         });
 
-        
+        // for wrong token ability exception 
+        $this->renderable(function( AccessDeniedHttpException $e, Request $request){
+            $error = [
+                "message"=>$e->getMessage(),
+                'code'=>403
+            ];
+            $response_body = HelperController::getFailedResponse($error,null);
+            return response($response_body,403);
+        });
 
-
-
+        // for sanctum unauthenticated 
+        $this->renderable(function (AuthenticationException $e, $request) {
+            $error = [
+                "message"=>$e->getMessage(),
+                'code'=>401
+            ];
+            $response_body = HelperController::getFailedResponse($error,null);
+            return response($response_body,401);
+        });
     }
-
-    
 }

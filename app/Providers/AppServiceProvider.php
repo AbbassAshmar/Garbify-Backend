@@ -9,7 +9,9 @@ use Stripe\StripeClient;
 class AppServiceProvider extends ServiceProvider
 {
     /**
-     * Register any application services.
+     * Register any application services. register s. are added to the service container and 
+     * can be used anywhere in the app by calling App::make() 
+     * instead of instantiating instances manually
      */
     public function register(): void
     {

@@ -60,6 +60,7 @@ class ProductFullResource extends JsonResource
             ),
 
             'images' => $this->colorsObject($this->colors_array),
+            "thumbnail" =>  new ProductsImageResource($this->thumbnail),
         ];
     }
 }

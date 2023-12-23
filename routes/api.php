@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\TokenAbility;
+use App\Http\Controllers\AccessTokenController;
 use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\FavoritesListController;
 use App\Http\Controllers\FilterController;
@@ -32,12 +34,14 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::post("/register",[UserController::class, 'register']);
 Route::post('/login', [UserController::class , 'login']);
-Route::post("/register/admin" ,[UserController::class, "adminRegister"])->middleware(['auth:sanctum','permission:register_admin']);
-Route::post('/logout',[UserController::class, 'logout'])->middleware(['auth:sanctum']);
-Route::patch("/users/{id}", [UserController::class,'updateUser'])->middleware(['auth:sanctum']);
+Route::post("/register/admin" ,[UserController::class, "adminRegister"])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value,'permission:register_admin']);
+Route::post('/logout',[UserController::class, 'logout'])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
+Route::patch("/users/user", [UserController::class,'updateUser'])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
+
+// create a middleware that validates access token by retrieving it from http-only cookie instead of Authorization header 
+Route::post("/access-tokens", [AccessTokenController::class, 'createAccessToken'])->middleware(['add_refresh_token_header','auth:sanctum','ability:'. TokenAbility::ISSUE_ACCESS_TOKEN->value]);
 
 // Products Controller Routes 
-
 Route::get("/products", [ProductController::class, "listProducts"]);
 Route::get("/products/popular",[ProductController::class, "listPopularProducts"]);
 Route::get("/products/{id}", [ProductController::class, "retrieveProduct"]);
@@ -54,38 +58,38 @@ Route::get("/categories", [NavbarController::class, "show"]);
 
 // Stripe Controller Routes 
 
-Route::post("/create-checkout-session",[StripeController::class, "stripeBase"])->middleware(["auth:sanctum"]);
+Route::post("/create-checkout-session",[StripeController::class, "stripeBase"])->middleware(["auth:sanctum",'ability:'. TokenAbility::ACCESS_API->value]);
 Route::post("/webhook", [StripeController::class,"stripeWebhookEventListener"]);
-Route::post("users/user/orders/canceled", [StripeController::class,"cancelOrder"])->middleware('auth:sanctum');
+Route::post("users/user/orders/canceled", [StripeController::class,"cancelOrder"])->middleware('auth:sanctum','ability:'. TokenAbility::ACCESS_API->value);
 
 // Reviews Controller Routes 
 
 Route::get("/products/{product_id}/reviews" , [ReviewController::class, "listReviewsByProduct"]);
-Route::get("/products/{product_id}/users/user/reviewed/", [ReviewController::class, "checkIfUserReviewed"])->middleware(['auth:sanctum']);
-Route::post("/reviews/{id}/like", [ReviewController::class , "likeReview"])->middleware(['auth:sanctum']);
-Route::post("/reviews", [ReviewController::class , "createReview"])->middleware(['auth:sanctum']);
-Route::delete("/reviews/{id}", [ReviewController::class,"deleteReview"])->middleware(["auth:sanctum"]);
+Route::get("/products/{product_id}/users/user/reviewed/", [ReviewController::class, "checkIfUserReviewed"])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
+Route::post("/reviews/{id}/like", [ReviewController::class , "likeReview"])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
+Route::post("/reviews", [ReviewController::class , "createReview"])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
+Route::delete("/reviews/{id}", [ReviewController::class,"deleteReview"])->middleware(["auth:sanctum",'ability:'. TokenAbility::ACCESS_API->value]);
 
 // Order Controller Routes
 
-Route::get("users/user/orders", [OrderController::class, "listOrders"])->middleware(['auth:sanctum']);
-Route::get("users/user/orders/canceled", [OrderController::class,'listCanceledOrders'])->middleware(['auth:sanctum']);
+Route::get("users/user/orders", [OrderController::class, "listOrders"])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
+Route::get("users/user/orders/canceled", [OrderController::class,'listCanceledOrders'])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
 
 // Favorite Controller Routes
 
-Route::post("/favorites", [FavoriteController::class, "createFavorite"])->middleware(['auth:sanctum']);
-Route::get("/users/user/favorites", [FavoriteController::class, "listByUser"])->middleware(["auth:sanctum"]);
+Route::post("/favorites", [FavoriteController::class, "createFavorite"])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
+Route::get("/users/user/favorites", [FavoriteController::class, "listByUser"])->middleware(["auth:sanctum",'ability:'. TokenAbility::ACCESS_API->value]);
 Route::get("/favorites_lists/{id}/favorites", [FavoriteController::class, "listByFavoritesList"]);
 
 // FavoritesList Controller Routes
 
 Route::get("/favorites_lists",[FavoritesListController::class, "listFavoritesList"]);
-Route::post("/favorites_lists/{id}/like",[FavoritesListController::class, "likeFavoritesList"])->middleware(['auth:sanctum']);
+Route::post("/favorites_lists/{id}/like",[FavoritesListController::class, "likeFavoritesList"])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
 Route::post("/favorites_lists/{id}/view",[FavoritesListController::class, "viewFavoritesList"]);
-Route::get('/users/user/favorites_lists',[FavoritesListController::class, "retrieveByUser"])->middleware(["auth:sanctum"]);
+Route::get('/users/user/favorites_lists',[FavoritesListController::class, "retrieveByUser"])->middleware(["auth:sanctum",'ability:'. TokenAbility::ACCESS_API->value]);
 Route::get("/favorites_lists/{id}", [FavoritesListController::class, "retrieveById"]);
 
-Route::patch("/favorites_lists/{id}",[FavoritesListController::class,'updateFavoritesList'])->middleware(['auth:sanctum']);
+Route::patch("/favorites_lists/{id}",[FavoritesListController::class,'updateFavoritesList'])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
 
 // admin :                      
 // update favorites lists 

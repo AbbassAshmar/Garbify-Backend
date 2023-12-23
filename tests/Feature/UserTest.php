@@ -40,6 +40,8 @@ class UserTest extends TestCase
             "confirm_password"  => "AaskfaA34acccppddd8",
         ];
         $request = $this->postJson("/api/register",$data);
+
+        $request->assertCookie('refresh_token');
         $request->assertCreated();
         $request->assertJsonStructure([
             'data' => ['user', 'token'],
@@ -63,6 +65,7 @@ class UserTest extends TestCase
             "confirm_password"  => "AaskfaA34acccppddd8",
         ];
         $request = $this->postJson("/api/register",$data);
+        $request->assertCookieMissing('refresh_token');
         $request->assertBadRequest();
         $error = [
             'message' => "Validation error.",
@@ -74,7 +77,7 @@ class UserTest extends TestCase
         $request->assertJson($response);
     }
 
-    public function test_admin_register_unauthorized(): void
+    public function test_admin_register_unauthenticated(): void
     {
         $request = $this->postJson("/api/register/admin");
         $request->assertUnauthorized();
@@ -114,7 +117,6 @@ class UserTest extends TestCase
             'metadata',
             'status',
             'data'=>[
-                'token',
                 'user' => [
                     'email',
                     'name',

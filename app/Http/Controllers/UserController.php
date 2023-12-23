@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TokenAbility;
 use Illuminate\Http\Request;
 use PhpOption\None;
 use App\Models\User;
@@ -13,6 +14,7 @@ use Exception;
 use Illuminate\Support\Carbon;
 use Laravel\Sanctum\PersonalAccessToken;
 use App\Models\FavoritesList;
+use App\Models\ShoppingCart;
 use GuzzleHttp\Exception\ServerException;
 use Illuminate\Validation\ValidationData;
 use Illuminate\Validation\ValidationException;
@@ -45,6 +47,7 @@ class UserController extends Controller
         }
 
         $this->createFavoritesList($new_user);
+        // $this->createShoppingCart($new_user);
         return $new_user;
     }
     
@@ -60,11 +63,24 @@ class UserController extends Controller
         return $favorites_list;
     }
 
-    //helper
-    protected function create_token($user,array $abilities=['client']){
-        return $user->createToken("user_token",$abilities,Carbon::now()->addDays(1));
+    public function createShoppingCart($user){
+        $shopping_cart = ShoppingCart::where("user_id", $user->id)->first();
+        if(!$shopping_cart){
+            $shopping_cart = ShoppingCart::create([
+
+            ]);
+        }
+        return $shopping_cart;
     }
-    
+    //helper
+    public static function create_access_token($user){
+        return $user->createToken('access-token',[TokenAbility::ACCESS_API->value],Carbon::now()->addDays(1));
+    }
+
+    public static function create_refresh_token($user){
+        return $user->createToken('refresh-token',[TokenAbility::ISSUE_ACCESS_TOKEN->value],Carbon::now()->addDays(1));
+    }
+ 
     //helper
     public static function check_token_expiry($token){
         if ($token->expires_at < Carbon::now()){
@@ -85,14 +101,19 @@ class UserController extends Controller
             $response_body = HelperController::getFailedResponse($error,null);
             return response($response_body,400);
         }
+        $new_user->assignRole('client');
 
-        $token = $this->create_token($new_user,[]);
+        $refresh_token = static::create_refresh_token($new_user);
+        $access_token = static::create_access_token($new_user);
+    
         $data=[
             'user'=>$new_user,
-            'token'=>$token->plainTextToken,
+            'token'=>$access_token->plainTextToken,
         ];
         $response_body = HelperController::getSuccessResponse($data,null);
-        return response($response_body,201);
+        $cookie = cookie('refresh_token',$refresh_token->plainTextToken,1440);
+
+        return response($response_body,201)->withCookie($cookie);
     }
     
     public function login(Request $request){
@@ -112,23 +133,28 @@ class UserController extends Controller
             ]);
         }
 
-        $token = $user->tokens()->first();
-        if ($token) $token->delete();
-        $token =$this->create_token($user)->plainTextToken;
+        // delete all refresh and access tokens 
+        $user->tokens()->delete();
+
+        // create an access token and a refresh token
+        $access_token =static::create_access_token($user)->plainTextToken;
+        $refresh_token =static::create_refresh_token($user)->plainTextToken;
 
         $data=[
             'user'=>$user,
-            'token'=>$token,
+            'token'=>$access_token,
         ];
         $response_body = HelperController::getSuccessResponse($data,null);
-        return response($response_body,201);
+        $cookie = cookie('refresh_token',$refresh_token->plainTextToken,1440);
+
+        return response($response_body,201)->withCookie($cookie);
     }
 
     public function logout(Request $request){
-        $token_plain_text = $request->bearerToken();
+        $user = $request->user();
         try{
-            $token =PersonalAccessToken::findToken($token_plain_text);
-            $token->delete();
+            //delete all user's tokens 
+            $user->tokens()->delete();
             $data = ['action'=>'deleted'];
             return response(HelperController::getSuccessResponse($data,null),200);
         }catch(Exception $e){
@@ -143,13 +169,20 @@ class UserController extends Controller
 
     public function adminRegister(Request $request){
         $new_user = $this->createUser($request);
+        if (!$new_user){
+            $error = [
+                'message'=>"An unexpected error occurred while processing your request. 
+                 Please try again later.",
+                'code'=>400
+            ];
+            $response_body = HelperController::getFailedResponse($error,null);
+            return response($response_body,400);
+        }
+        
         $new_user->assignRole('admin');
-        $token = $this->create_token($new_user);
-        $body = [
-            'token'=>$token->plainTextToken,
-            'user'=>$new_user
-        ];
+        $body = ['user'=>$new_user];
         $response_body = HelperController::getSuccessResponse($body,null);
+        
         return response($response_body, 201);
     }
 
@@ -234,5 +267,7 @@ class UserController extends Controller
         $error = ['message'=>'Update failed.', 'code'=>400];
         $response_body = HelperController::getFailedResponse($error,null);
         return response($response_body,400);
-    }
+    }  
+
+
 }

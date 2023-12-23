@@ -1,6 +1,8 @@
 <?php
 
 namespace Tests\Feature;
+
+use App\Enums\TokenAbility;
 use App\Models\Size;
 use App\Models\Color;
 use App\Models\Product;
@@ -36,7 +38,7 @@ class HelperTest {
 
     public static function create_admin(){
         $admin = User::create(["name"=>"admin","email"=>"admin@gmail.com", "password"=>"123321"]);
-        $token_admin = $admin->createToken("admin_token",[], Carbon::now()->addDays(1))->plainTextToken;
+        $token_admin = $admin->createToken("admin_token",[TokenAbility::ACCESS_API->value], Carbon::now()->addDays(1))->plainTextToken;
         $admin->assignRole("admin");
 
         return ["token" => $token_admin , "user" => $admin];
@@ -44,7 +46,7 @@ class HelperTest {
 
     public static function create_super_admin(){
         $super_admin = User::create(["name"=>"super admin","email"=>"super.admin@gmail.com", "password"=>"123321"]);
-        $token_super_admin = $super_admin->createToken("super_admin_token",[],Carbon::now()->addDays(1))->plainTextToken;
+        $token_super_admin = $super_admin->createToken("super_admin_token",[TokenAbility::ACCESS_API->value],Carbon::now()->addDays(1))->plainTextToken;
         $super_admin->assignRole("super admin");
 
         return ["token" => $token_super_admin , "user" => $super_admin];
@@ -62,9 +64,9 @@ class HelperTest {
         $user_2->assignRole("client");
         $user_3->assignRole("client");
 
-        $token_1 = $user_1->createToken("user_token",[],Carbon::now()->addDays(1))->plainTextToken;
-        $token_2 = $user_2->createToken("user_token",[],Carbon::now()->addDays(1))->plainTextToken;
-        $token_3 = $user_3->createToken("user_token",[],Carbon::now()->addDays(1))->plainTextToken;
+        $token_1 = $user_1->createToken("user_token",[TokenAbility::ACCESS_API->value],Carbon::now()->addDays(1))->plainTextToken;
+        $token_2 = $user_2->createToken("user_token",[TokenAbility::ACCESS_API->value],Carbon::now()->addDays(1))->plainTextToken;
+        $token_3 = $user_3->createToken("user_token",[TokenAbility::ACCESS_API->value],Carbon::now()->addDays(1))->plainTextToken;
 
         return [
             'users' =>[$user_1,$user_2,$user_3],

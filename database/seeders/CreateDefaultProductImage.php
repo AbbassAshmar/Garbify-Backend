@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\Image;
+use App\Models\ProductsImage;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -13,7 +13,7 @@ class CreateDefaultProductImage extends Seeder
      */
     public function run(): void
     {
-        Image::create([
+        ProductsImage::create([
             'image_url'=>'defualtProductImage.png',
             'image_details'=>"default image",
             'product_id'=>null,
