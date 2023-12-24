@@ -27,8 +27,13 @@ class AccessTokenTest extends TestCase
         $this->user_1 = $user_token['users'][0];
         $this->access_token_1 =  $user_token['tokens'][0];
         $this->refresh_token_1 =$this->user_1->createToken("refresh_token",[TokenAbility::ISSUE_ACCESS_TOKEN->value],Carbon::now()->addDays(1))->plainTextToken;
-        $this->refresh_token_2 =$this->user_1->createToken("refresh_token",[TokenAbility::ISSUE_ACCESS_TOKEN->value],Carbon::yesterday())->plainTextToken;
 
+        $refresh_token_2 =$this->user_1->createToken("refresh_token",[TokenAbility::ISSUE_ACCESS_TOKEN->value],Carbon::now()->subDays(3));
+        $refresh_token_2->accessToken->created_at = Carbon::now()->subDays(5);
+        $refresh_token_2->accessToken->last_used_at = Carbon::now()->subDays(4);
+        $refresh_token_2->accessToken->save();
+
+        $this->refresh_token_2= $refresh_token_2->plainTextToken;
     }
 
     public function test_create_access_token_by_refresh_token_success(): void
@@ -76,12 +81,24 @@ class AccessTokenTest extends TestCase
         $response->assertUnauthorized();
         $response->assertJsonFragment(['message' =>"Unauthenticated."]);
     }
-    public function test_create_access_token_by_wrong_refresh_token(): void
+    public function test_create_access_token_by_invalid_refresh_token(): void
     {
         $headers = $this->transformHeadersToServerVars(['CONTENT_TYPE' => 'application/json', 'Accept' => 'application/json',]);
         $cookies = ['refresh_token' => '6|ajsfiow34aslkdfj2432j4jf9ds0'];
         $response = $this->call('POST', '/api/access-tokens', [],$cookies, [], $headers);
         $response->assertUnauthorized();
         $response->assertJsonFragment(['message' =>"Unauthenticated."]);
+    }
+    public function test_create_access_token_by_old_unexpired_refresh_token(): void
+    {
+        $headers = $this->transformHeadersToServerVars(['CONTENT_TYPE' => 'application/json', 'Accept' => 'application/json',]);
+        $cookies = ['refresh_token' => $this->refresh_token_1];
+        $response = $this->call('POST', '/api/access-tokens', [],$cookies,[], $headers);
+        $response->assertCreated();
+        
+        $cookies = ['refresh_token' => $this->refresh_token_1];
+        $response = $this->call('POST', '/api/access-tokens', [],$cookies,[], $headers);
+        $response->assertUnauthorized();
+        $response->assertJsonFragment(['message'=>'Unauthenticated.']);
     }
 }

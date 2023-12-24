@@ -74,11 +74,11 @@ class UserController extends Controller
     }
     //helper
     public static function create_access_token($user){
-        return $user->createToken('access-token',[TokenAbility::ACCESS_API->value],Carbon::now()->addDays(1));
+        return $user->createToken('access-token',[TokenAbility::ACCESS_API->value],Carbon::now()->addMinutes(2880));
     }
 
     public static function create_refresh_token($user){
-        return $user->createToken('refresh-token',[TokenAbility::ISSUE_ACCESS_TOKEN->value],Carbon::now()->addDays(1));
+        return $user->createToken('refresh-token',[TokenAbility::ISSUE_ACCESS_TOKEN->value],Carbon::now()->addMinutes(80));
     }
  
     //helper
@@ -111,7 +111,7 @@ class UserController extends Controller
             'token'=>$access_token->plainTextToken,
         ];
         $response_body = HelperController::getSuccessResponse($data,null);
-        $cookie = cookie('refresh_token',$refresh_token->plainTextToken,1440);
+        $cookie = cookie('refresh_token',$refresh_token->plainTextToken,2880);
 
         return response($response_body,201)->withCookie($cookie);
     }
@@ -145,7 +145,7 @@ class UserController extends Controller
             'token'=>$access_token,
         ];
         $response_body = HelperController::getSuccessResponse($data,null);
-        $cookie = cookie('refresh_token',$refresh_token->plainTextToken,1440);
+        $cookie = cookie('refresh_token',$refresh_token->plainTextToken,2880);
 
         return response($response_body,201)->withCookie($cookie);
     }
