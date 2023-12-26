@@ -80,6 +80,10 @@ class User extends Authenticatable
         return $this->belongsToMany(User::class, "favorites_list_likes","user_id","favorites_list_id");
     }
 
+    public function shoppingCart(){
+        return $this->hasMany(ShoppingCart::class);
+    }
+
     public function setPasswordAttribute($password){
         $this->attributes['password'] = Hash::make($password);
     }

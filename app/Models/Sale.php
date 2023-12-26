@@ -16,6 +16,7 @@ class Sale extends Model
     function product(){
         return $this->belongsTo(Product::class);
     }
+    
     public function getStartsAt8601Attribute(){
         $date = DateTime::createFromFormat('yyyy-mm-dd hh:mi:ss',$this->starts_at);
         return $this->starts_at->format('c');

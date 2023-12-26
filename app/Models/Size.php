@@ -15,20 +15,27 @@ class Size extends Model
     function products(){
         return $this->belongsToMany(Product::class, "products_sizes","size_id","product_id");
     }
+
     public function images(){
-        return $this->hasMany(Image::class);
+        return $this->hasMany(ProductsImage::class);
     }
+
     public function reviews(){
         return $this->hasMany(Review::class);
     }
+
     public function orderDetails(){
-        return $this->hasMany(OrderDetails::class);
+        return $this->hasMany(OrderDetail::class);
     }
-    // returns alternative sizes of a size (collection)
+
     public function alternativeSizes(){
         return $this->hasMany(AlternativeSize::class);
     }
 
+    public function shoppingCartItems(){
+        return $this->hasMany(ShoppingCartItem::class);
+    }
+    
     //returns all units of alternative sizes of a size (array)
     public function getAlternativeUnitsAttribute(){
         $arr = [];

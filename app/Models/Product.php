@@ -60,6 +60,10 @@ class Product extends Model
         return $this->hasMany(Favorite::class);
     }
 
+    public function shoppingCartItems(){
+        return $this->hasMany(ShoppingCartItem::class);
+    }
+
     public function getThumbnailAttribute(){
         $thumbnail=  $this->images()->where("is_thumbnail",true)->first();
         if (!$thumbnail){

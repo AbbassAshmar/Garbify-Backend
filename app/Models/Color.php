@@ -15,7 +15,7 @@ class Color extends Model
     }
 
     public function images(){
-        return $this->hasMany(Image::class);
+        return $this->hasMany(ProductsImage::class);
     }
     
     public function reviews(){
@@ -23,6 +23,10 @@ class Color extends Model
     }
     
     public function orderDetails(){
-        return $this->hasMany(OrderDetails::class);
+        return $this->hasMany(OrderDetail::class);
+    }
+
+    public function shoppingCartItems(){
+        return $this->hasMany(ShoppingCartItem::class);
     }
 }
