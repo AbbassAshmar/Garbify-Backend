@@ -40,7 +40,7 @@ class FavoriteController extends Controller
     // returns all favorites of a favorites list (user get other user's favorites)
     public function listByFavoritesList(Request $request, $id){
         $pageLimit = ['page'=>$request->input("page"),"limit"=>$request->input("limit")];
-        $sort_by = $request->input("sort+by");
+        $sort_by = $request->input("sort");
         $search = $request->input('q');
 
         $favorites_list = FavoritesList::find($id);
@@ -62,7 +62,7 @@ class FavoriteController extends Controller
     //returns all favorites of a logged in user by token (used for displaying users' own favorites)
     public function listByUser(Request $request){
         $pageLimit = ['page'=>$request->input("page"),"limit"=>$request->input("limit")];
-        $sort_by = $request->input("sort_by");
+        $sort_by = $request->input("sort");
         $search = $request->input("q");
         $user = $request->user();
 

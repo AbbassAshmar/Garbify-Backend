@@ -30,7 +30,7 @@ class OrderController extends Controller
     // listByToken
     public function listOrders(Request $request){
         $pageLimt =['page'=> $request->input("page"),'limit'=>$request->input("limit")];
-        $sort_by = $request->input("sort_by")?$request->input("sort_by"):"created_at DESC";
+        $sort_by =$request->input("sort")?$request->input("sort"):"created_at DESC";
         $search = $request->input("q");
 
         // get orders of user
@@ -58,7 +58,7 @@ class OrderController extends Controller
 
     public function listCanceledOrders(Request $request){
         $pageLimt =['page'=> $request->input("page"),'limit'=>$request->input("limit")];
-        $sort_by = $request->input("sort_by")?$request->input("sort_by"):"created_at DESC";
+        $sort_by =$request->input("sort")?$request->input("sort"):"created_at DESC";
         $search = $request->input("q");
 
         // get orders of user

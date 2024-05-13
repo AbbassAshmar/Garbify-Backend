@@ -24,16 +24,13 @@ class FavoritesListController extends Controller
         $user_token =  HelperController::getUserAndToken($request);
         $current_user = $user_token["user"];
         $pageLimit= ['page'=>$request->input("page"),'limit'=>$request->input("limit")];
-        $sort_by = $request->input("sort_by")?$request->input("sort_by"):"most popular";
+        $sort_by = $request->input("sort")?$request->input("sort"):"most popular";
         $search = $request->input('q');
 
         $favorites_lists = FavoritesList::has("favorites")->where("public", true);
         
-        if ($sort_by=="most popular") 
-            $sort_by = "views_count-5*likes_count+ASC";
-            
-        if ($search) 
-            $favorites_lists = $favorites_lists->where("name","like","%$search%");
+        if ($sort_by=="most popular") $sort_by = "views_count-5*likes_count+ASC";
+        if ($search) $favorites_lists = $favorites_lists->where("name","like","%$search%");
 
         $response_body = HelperController::getCollectionAndCount(
             $favorites_lists,
@@ -53,7 +50,7 @@ class FavoritesListController extends Controller
     public function retrieveByUser(Request $request){
         $current_user = $request->user();
 
-        $favorites_list = FavoritesList::where("user_id" , $current_user->id)->first();
+        $favorites_list = $current_user->favoritesList()->with('favorites')->get();
         HelperController::checkIfNotFound($favorites_list,"Favorites list");
 
         $resource = new FavoritesListResource($favorites_list,null,$current_user);
@@ -65,7 +62,7 @@ class FavoritesListController extends Controller
         $user_token =  HelperController::getUserAndToken($request);
         $current_user = $user_token["user"];
 
-        $favorites_list = FavoritesList::with("user")->find($id);
+        $favorites_list = FavoritesList::with("favorites")->find($id);
         HelperController::checkIfNotFound($favorites_list,"Favorites list");
         
         $resource = new FavoritesListResource($favorites_list,null,$current_user);
@@ -167,3 +164,4 @@ class FavoritesListController extends Controller
         return response($response_body,400);
     }
 }
+

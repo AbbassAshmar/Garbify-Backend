@@ -40,8 +40,6 @@ class Order extends Model
         return $this->hasMany(OrderDetail::class);
     }
 
-    
-
     //ACCESSORS 
 
     // created at : 0-2 days -> shipping in ... days
@@ -53,6 +51,7 @@ class Order extends Model
        
         if ($created_at_since < 2 )
             return "Shipping in ". (2-$created_at_since) ." days";
+        
         if ($created_at_since == 2)
             return "Shipping today";
 

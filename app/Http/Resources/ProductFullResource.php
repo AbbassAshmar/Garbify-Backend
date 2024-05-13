@@ -25,6 +25,7 @@ class ProductFullResource extends JsonResource
         }
         return $obj;
     }
+    
     public function toArray(Request $request): array
     {
         return [

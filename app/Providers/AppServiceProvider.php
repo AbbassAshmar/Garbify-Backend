@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Http\Controllers\FilterController;
 use App\Http\Controllers\StripeController;
+use App\Services\Product\ProductService;
 use Illuminate\Support\ServiceProvider;
 use Stripe\StripeClient;
 
@@ -19,6 +21,10 @@ class AppServiceProvider extends ServiceProvider
             $stripe = new StripeClient(env("STRIPE_SECRET"));
             return new StripeController($stripe);
         });
+
+        $this->app->bind(ProductService::class);
+
+        $this->app->bind(FilterController::class);
     }
 
     /**

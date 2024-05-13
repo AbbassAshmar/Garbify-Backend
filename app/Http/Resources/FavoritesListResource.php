@@ -29,7 +29,8 @@ class FavoritesListResource extends JsonResource
     {
         return( 
             parent::toArray($request) + 
-            ["is_liked_by_current_user" => $this->isLikedByCurrentUser(self::$currentUser)]      
+            ["is_liked_by_current_user" => $this->isLikedByCurrentUser(self::$currentUser)] +
+            ['favorites_count' => $this->favorites()->count()]   
         );
     }
 

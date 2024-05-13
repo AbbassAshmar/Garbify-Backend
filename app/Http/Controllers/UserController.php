@@ -35,6 +35,7 @@ class UserController extends Controller
             'password.same' => '',
             'confirm_password.same' => "Passwords do not match.", 
         ]);
+        
         try {
             $new_user = User::create([
                 'email' => $valid['email'] , 
@@ -74,11 +75,11 @@ class UserController extends Controller
     }
     //helper
     public static function create_access_token($user){
-        return $user->createToken('access-token',[TokenAbility::ACCESS_API->value],Carbon::now()->addMinutes(2880));
+        return $user->createToken('access-token',[TokenAbility::ACCESS_API->value],Carbon::now()->addMinutes(20));
     }
 
     public static function create_refresh_token($user){
-        return $user->createToken('refresh-token',[TokenAbility::ISSUE_ACCESS_TOKEN->value],Carbon::now()->addMinutes(80));
+        return $user->createToken('refresh-token',[TokenAbility::ISSUE_ACCESS_TOKEN->value],Carbon::now()->addMinutes(2880));
     }
  
     //helper

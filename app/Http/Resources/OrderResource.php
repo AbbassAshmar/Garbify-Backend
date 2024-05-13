@@ -19,7 +19,7 @@ class OrderResource extends JsonResource
             "id"=>$this->id,
             "created_at"=>$this->created_at,
             "status"=>$this->status,
-            "total_cost"=>$this->total_cost,
+            "amount_total"=>$this->amount_total,
             "shipping_status"=>$this->shipping_status,
             "return_cancellation_info" =>$this->return_cancellation_info,
             "recipient_name"=>$this->shippingAddress->recipient_name,

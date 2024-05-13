@@ -6,6 +6,7 @@ use App\Http\Resources\NavbarCollection;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use App\Http\Resources\NavbarResource;
+
 class NavbarController extends Controller
 {
     public function show(Request $request){

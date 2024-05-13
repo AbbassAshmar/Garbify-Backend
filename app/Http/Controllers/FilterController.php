@@ -2,14 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\GetCategoriesHelper;
+
 use Illuminate\Http\Request;
-use App\Http\Controllers\ProductController;
 use App\Models\Category;
 use App\Models\Color;
 use App\Models\Product;
 use App\Models\Size;
 
 class FilterController extends Controller{
+    private $getCategoriesHelper;
+
+    function __construct(GetCategoriesHelper $getCategoriesHelper){
+        $this->getCategoriesHelper = $getCategoriesHelper;
+    }
+    
     private function getResponse($categories, $colors, $sizes,$price){
         return  [
             [
@@ -56,8 +63,9 @@ class FilterController extends Controller{
             return response($this->getResponse($main_categories, $main_colors,$main_sizes,$price),200);
         }
 
-        $cat = (new ProductController())->getChildByParents($category);
-        $children = (new ProductController())->getSingleCategoryChildren($cat);
+        $cat = $this->getCategoriesHelper->getChildByParents($category);
+        $children = $this->getCategoriesHelper->getChildrenOfCategory($cat);
+
         $ids = [];
         foreach($children as $child){
             array_push($ids, $child->id);

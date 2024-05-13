@@ -14,6 +14,7 @@ use App\Models\ReviewsImage;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Exceptions\UnauthorizedException;
+use Symfony\Component\Routing\Exception\ResourceNotFoundException;
 
 class ReviewController extends Controller
 {
@@ -23,7 +24,7 @@ class ReviewController extends Controller
         $current_user = $user_token["user"];
 
         $pageLimit = ['page'=>$request->input("page"), 'limit'=> $request->input('limit')];
-        $sort_by = $request->input("sort-by") ? $request->input("sort-by") : "helpful_count DESC";
+        $sort_by = $request->input("sort") ? $request->input("sort") : "helpful_count DESC";
         
         $product = Product::find($product_id);
         HelperController::checkIfNotFound($product, "Product");
@@ -75,15 +76,18 @@ class ReviewController extends Controller
         $user = $request->user();
         
         $product = Product::find($product_id);
-        if (!$product) return response(['message' => 'product not found.'],400);
+        HelperController::checkIfNotFound($product,'Product');
 
         $review = Review::where([["user_id",$user->id] , ["product_id", $product_id]])->first();
         if (!$review) {
-            $response = HelperController::getSuccessResponse(['reviewed'=>false],null);
+            $response = HelperController::getSuccessResponse(['is_reviewed'=>false],null);
             return response($response, 200);
         }
 
-        $response = HelperController::getSuccessResponse(['reviewed'=>true],null);
+        $data = ['is_reviewed'=>true];
+        $metadata = ['review_id'=>$review->id];
+        $response = HelperController::getSuccessResponse($data,$metadata);
+        
         return response($response, 200);
     }
 

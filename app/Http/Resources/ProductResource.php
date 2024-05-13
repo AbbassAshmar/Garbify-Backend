@@ -24,7 +24,7 @@ class ProductResource extends JsonResource
             'price' =>$this->price,
             'type' =>$this->type,
             "colors" =>$this->colors_array,
-            "added_at"=>$this->created_at,
+            "created_at"=>$this->created_at,
             "sale" => $this->when($this->current_sale ,$this->current_sale?
                 [
                     'price_after_sale'=>$this->current_sale->price_after_sale,
@@ -34,6 +34,10 @@ class ProductResource extends JsonResource
                 ]
                 :null
             ),
+            'reviews_summary'=>[
+                'average_ratings'=> $this->average_ratings,
+                'reviews_count' =>$this->reviews_count,
+            ],
             "thumbnail" =>  new ProductsImageResource($this->thumbnail),
         ];
     }

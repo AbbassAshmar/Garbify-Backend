@@ -330,9 +330,9 @@ class StripeController extends Controller
             return response($response_body, 400);
         }
     }
-    
 
-    function stripeBase(Request $request){
+    //used to checkout a product or more
+    function checkoutProducts(Request $request){
         $user = $request->user();
         $products = $request->input("products");
         $shipping_options = ShippingMethod::all()->all();
@@ -414,8 +414,8 @@ class StripeController extends Controller
             
                 'mode' => 'payment',
 
-                'success_url' => 'http://localhost:5173/checkout-successful',
-                'cancel_url' => 'http://localhost:5173/cart',
+                'success_url' => 'http://localhost:5173/products',
+                'cancel_url' => 'http://localhost:5173/shopping_cart',
 
                 'metadata' => [  // stored in the payment intent to be retrieved later 
                     'user_id'=>$user->id,
@@ -453,7 +453,7 @@ class StripeController extends Controller
 
             $data = ['form_url'=>$session->url];
             $response_body = HelperController::getSuccessResponse($data, null);
-            return response($response_body,200);
+            return response($response_body,201);
         }catch (ApiErrorException $e){
             $error = [
                 'message'=>'Cancelation failed.',
