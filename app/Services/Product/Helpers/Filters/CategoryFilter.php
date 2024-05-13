@@ -33,14 +33,15 @@ class CategoryFilter implements Ifilter{
     }
 
 
-    //returns all products starting from the last element in categories[] till the end of the tree
+    //returns all products of categories[last_element] and it's children
+    //if no categories provided, category doesn't exist, it returns all products
     private function filterCategories($products, array $categories=[]){
         if (count($categories)<= 0) return $products;
 
         // get the children of every category in $categories
         $categories_array = $this->getCategoriesHelper->getChildrenOfCategory($this->getCategoriesHelper->getChildByParents($categories));
+        
         $ids_array = [];
-       
         foreach($categories_array as $category){
             array_push($ids_array,$category->id);
         }

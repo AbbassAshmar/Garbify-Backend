@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\GetCategoriesHelper;
 use App\Http\Resources\ProductFullResource;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;

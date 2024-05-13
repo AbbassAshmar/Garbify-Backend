@@ -44,14 +44,17 @@ class GetCategoriesHelper {
     // returns the descendents of a single category
     public function getChildrenOfCategory($category){
         if(!($category instanceof Category)) return [];
+
         //array of children of $category
         $children = Category::where('parent_id', $category->id)->get()->all();
         if (!$children) return [$category]; 
+
+        // get the children of each child
         $resultArr = [];
         foreach($children as $child){
-            // get the children of each child
             $resultArr= array_merge($resultArr, $this->getChildrenOfCategory($child));
         }
+        
         array_push($resultArr,$category);
         return $resultArr; 
     }

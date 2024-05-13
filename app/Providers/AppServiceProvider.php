@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Helpers\GetCategoriesHelper;
 use App\Http\Controllers\FilterController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\StripeController;
 use App\Services\Product\ProductService;
 use Illuminate\Support\ServiceProvider;
@@ -22,9 +24,10 @@ class AppServiceProvider extends ServiceProvider
             return new StripeController($stripe);
         });
 
-        $this->app->bind(ProductService::class);
-
-        $this->app->bind(FilterController::class);
+        $this->app->bind(ProductService::class, function(){
+            $getCategoriesHelper = new GetCategoriesHelper();
+            return new ProductService($getCategoriesHelper);
+        });
     }
 
     /**
