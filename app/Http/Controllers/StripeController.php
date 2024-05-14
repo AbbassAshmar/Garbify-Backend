@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\ProductOutOfStockException;
+use App\Helpers\GetResponseHelper;
+use App\Helpers\ValidateResourceHelper;
 use App\Models\Product;
 use GuzzleHttp\Psr7\Message;
 use Illuminate\Http\Request;
@@ -93,7 +95,7 @@ class StripeController extends Controller
         foreach($products as $product){
             $product_id = (int)$product['price']['product']['metadata']['id'];
             $product_obj = Product::find($product_id);
-            HelperController::checkIfNotFound($product_obj,"Product");
+            ValidateResourceHelper::ensureResourceExists($product_obj,"Product");
 
             //update product quantity 
             $product_obj->update(['quantity' => $product_obj->quantity - $product['quantity']]);
@@ -103,7 +105,7 @@ class StripeController extends Controller
             $sale_id = $product['price']['product']['metadata']['sale_id'];
             if ($sale_id){
                 $sale_obj = Sale::find((int)$sale_id);
-                HelperController::checkIfNotFound($sale_id, "Sale");
+                ValidateResourceHelper::ensureResourceExists($sale_id, "Sale");
                 $sale_percentage = $sale_obj->sale_percentage;
                 $amount_discount =($sale_percentage / 100) * $product['amount_subtotal']/100;
                 $sale_obj->update(['quantity' => $sale_obj->quantity -  $product['quantity']]);
@@ -147,7 +149,7 @@ class StripeController extends Controller
                 'details' => $e->getMessage(),
                 'code' => 400, 
             ];
-            $response_body = HelperController::getFailedResponse($error, null);
+            $response_body = GetResponseHelper::getFailedResponse($error, null);
             return response($response_body, 400); 
         } catch(SignatureVerificationException $e) {
             // Invalid signature
@@ -156,7 +158,7 @@ class StripeController extends Controller
                 'details' => $e->getMessage(),
                 'code' => 400, 
             ];
-            $response_body = HelperController::getFailedResponse($error, null);
+            $response_body = GetResponseHelper::getFailedResponse($error, null);
             return response($response_body, 400); 
         }
 
@@ -189,13 +191,13 @@ class StripeController extends Controller
                     'details' => $e->getMessage(),
                     'code' => 200, 
                 ];
-                $response_body = HelperController::getFailedResponse($error, null);
+                $response_body = GetResponseHelper::getFailedResponse($error, null);
                 return response($response_body, 200); 
             }
         }
         
         $data = ['action'=>'Received event',];
-        $response_body = HelperController::getSuccessResponse($data, null);
+        $response_body = GetResponseHelper::getSuccessResponse($data, null);
         return response($response_body, 200); 
     }
 
@@ -212,7 +214,7 @@ class StripeController extends Controller
                     'details' => $refund->failure_reason,
                     'code' => 400, 
                 ];
-                $response_body = HelperController::getFailedResponse($error, null);
+                $response_body = GetResponseHelper::getFailedResponse($error, null);
                 return response($response_body, 400);
             }
 
@@ -227,7 +229,7 @@ class StripeController extends Controller
             $metaData = [
                 'amount_refunded' => $refund->amount,
             ];
-            $response_body = HelperController::getSuccessResponse($data, $metaData);
+            $response_body = GetResponseHelper::getSuccessResponse($data, $metaData);
             return response($response_body, 200);   
 
         } catch (ApiErrorException $e) {
@@ -236,26 +238,27 @@ class StripeController extends Controller
                 'details' => $e->getMessage(),
                 'code' => 400, 
             ];
-            $response_body = HelperController::getFailedResponse($error, null);
+            $response_body = GetResponseHelper::getFailedResponse($error, null);
             return response($response_body, 400);
         }
     }
 
+    // Partially cancel Order
     function cancelOrder(Request $request){
         $order  = Order::find($request->input("order_id"));
-        HelperController::checkIfNotFound($order,"Order");
+        ValidateResourceHelper::ensureResourceExists($order,"Order");
 
         // check if order has already been cancleled
         if ($order->status == 'Canceled'){
             $error = ['message' => 'Order has already been canceled.'];
-            $response_body = HelperController::getFailedResponse($error,null);
+            $response_body = GetResponseHelper::getFailedResponse($error,null);
             return response($response_body, 400);
         }
 
         //check order status 
         if (!$order->can_be_canceled){
             $error = ['message' => 'Order cancelation period is over.'];
-            $response_body = HelperController::getFailedResponse($error,null);
+            $response_body = GetResponseHelper::getFailedResponse($error,null);
             return response($response_body, 400);
         }
 
@@ -263,27 +266,29 @@ class StripeController extends Controller
         return $this->cancelEntireOrder($order);
     }  
 
+
+    // cancel order partially
     function cancelProduct(Request $request){
         $order  = Order::find($request->input("order_id"));
-        HelperController::checkIfNotFound($order,"Order");
+        ValidateResourceHelper::ensureResourceExists($order,"Order");
 
         $product_id = $request->input("product_id");
 
         // check if product is part of the order
         $product_in_order = $order->orderDetails()->where('product_id' , $product_id)->first();
-        HelperController::checkIfNotFound($product_in_order,'Product');
+        ValidateResourceHelper::ensureResourceExists($product_in_order,'Product');
 
         // check if product has already been canceled 
         if ($product_in_order->canceled_at){
             $error = ['message' => 'Product has already been canceled.'];
-            $response_body = HelperController::getFailedResponse($error,null);
+            $response_body = GetResponseHelper::getFailedResponse($error,null);
             return response($response_body, 400);
         }
 
         //check order status 
         if (!$order->can_be_canceled){
             $error = ['message' => 'Order cancelation period is over.'];
-            $response_body = HelperController::getFailedResponse($error,null);
+            $response_body = GetResponseHelper::getFailedResponse($error,null);
             return response($response_body, 400);
         }
 
@@ -305,7 +310,7 @@ class StripeController extends Controller
                     'details' => $refund->failure_reason,
                     'code' => 400, 
                 ];
-                $response_body = HelperController::getFailedResponse($error, null);
+                $response_body = GetResponseHelper::getFailedResponse($error, null);
                 return response($response_body, 400);
             }
 
@@ -317,7 +322,7 @@ class StripeController extends Controller
                 'amount_refunded' => $refund->amount,
                 "canceled_product"  => $product_in_order->product->name
             ];
-            $response_body = HelperController::getSuccessResponse($data, $metaData);
+            $response_body = GetResponseHelper::getSuccessResponse($data, $metaData);
             return response($response_body, 200);
 
         } catch (ApiErrorException $e) {
@@ -326,7 +331,7 @@ class StripeController extends Controller
                 'details' => $e->getMessage(),
                 'code' => 400, 
             ];
-            $response_body = HelperController::getFailedResponse($error, null);
+            $response_body = GetResponseHelper::getFailedResponse($error, null);
             return response($response_body, 400);
         }
     }
@@ -339,15 +344,15 @@ class StripeController extends Controller
 
         $products = array_map(function($product){
             $get_product = Product::find($product['product_id']);
-            HelperController::checkIfNotFound($get_product, "Product"); // check if product to be ordered exists
+            ValidateResourceHelper::ensureResourceExists($get_product, "Product"); // check if product to be ordered exists
 
             $get_color = $get_product->colors()->where('color', $product['color'])->first();
             $color_error = "Color ".$product['color']. ' of '.$get_product->name;
-            HelperController::checkIfNotFound($get_color, $color_error);// check if color to be ordered exists
+            ValidateResourceHelper::ensureResourceExists($get_color, $color_error);// check if color to be ordered exists
 
             $get_size = $get_product->sizes()->where('size', $product['size'])->first();
             $size_error = "Size ".$product['size']. ' of '.$get_product->name;
-            HelperController::checkIfNotFound($get_size, "Size ".$size_error);// check if size to be ordered exists
+            ValidateResourceHelper::ensureResourceExists($get_size, "Size ".$size_error);// check if size to be ordered exists
 
             $new_quantity = $get_product-> quantity - $product['quantity']; // check for sufficient quantity
             if ($new_quantity < 0) {
@@ -452,7 +457,7 @@ class StripeController extends Controller
             ]);
 
             $data = ['form_url'=>$session->url];
-            $response_body = HelperController::getSuccessResponse($data, null);
+            $response_body = GetResponseHelper::getSuccessResponse($data, null);
             return response($response_body,201);
         }catch (ApiErrorException $e){
             $error = [
@@ -460,7 +465,7 @@ class StripeController extends Controller
                 'details' => $e->getMessage(),
                 'code' => 500, 
             ];
-            $response_body = HelperController::getFailedResponse($error, null);
+            $response_body = GetResponseHelper::getFailedResponse($error, null);
             return response($response_body, 500);
         }
     }

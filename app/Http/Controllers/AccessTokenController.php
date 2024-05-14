@@ -3,13 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Enums\TokenAbility;
+use App\Helpers\AuthenticationHelper;
+use App\Helpers\GetResponseHelper;
+use App\Helpers\TransactionHelper;
 use Illuminate\Auth\AuthenticationException;
-use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Http\Request;
 use Laravel\Sanctum\PersonalAccessToken;
 use Stevebauman\Location\Facades\Location;
-
-use function PHPUnit\Framework\isEmpty;
 
 class AccessTokenController extends Controller
 {
@@ -71,18 +71,18 @@ class AccessTokenController extends Controller
             $user->tokens()->where("abilities","like","%". TokenAbility::ACCESS_API->value ."%")->delete();
 
             // create new access and refresh tokens for the user 
-            $access_token = UserController::create_access_token($user);
-            $refresh_token = UserController::create_refresh_token($user);
+            $access_token = AuthenticationHelper::createAccessToken($user);
+            $refresh_token = AuthenticationHelper::createRefreshToken($user);
 
             return [$access_token, $refresh_token];
         };
         
-        [$access_token,$refresh_token] = HelperController::transaction($token_operations,[$user]);
+        [$access_token,$refresh_token] = TransactionHelper::makeTransaction($token_operations,[$user]);
 
         // replace the refresh token with the new one
         $cookie = cookie('refresh_token', $refresh_token->plainTextToken,2880);
         $data = ['token' => $access_token->plainTextToken];
-        $response_body = HelperController::getSuccessResponse($data,null);
+        $response_body = GetResponseHelper::getSuccessResponse($data,null);
 
         return response($response_body,201)->withCookie($cookie);
     }

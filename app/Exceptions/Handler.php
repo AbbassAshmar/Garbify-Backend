@@ -2,6 +2,7 @@
 
 namespace App\Exceptions;
 
+use App\Helpers\GetResponseHelper;
 use App\Http\Controllers\HelperController;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
@@ -56,7 +57,7 @@ class Handler extends ExceptionHandler
             }
 
             $metadata = ['error_fields' => $fields];
-            $response_body = HelperController::getFailedResponse($error,$metadata);
+            $response_body = GetResponseHelper::getFailedResponse($error,$metadata);
             return response($response_body, 400);
         });
 
@@ -66,7 +67,7 @@ class Handler extends ExceptionHandler
                 'message'=>'You do not have the required authorization.',
                 'code' => 403
             ];
-            $response_body = HelperController::getFailedResponse($error,null);
+            $response_body = GetResponseHelper::getFailedResponse($error,null);
             return response($response_body, 403);
         });
 
@@ -76,7 +77,7 @@ class Handler extends ExceptionHandler
                 'message' => $e->getMessage(),
                 'code' => 500
             ];
-            $response_body = HelperController::getFailedResponse($error,null);
+            $response_body = GetResponseHelper::getFailedResponse($error,null);
             return response($response_body, 500);
         });
 
@@ -86,7 +87,7 @@ class Handler extends ExceptionHandler
                 "message"=>$e->getMessage(),
                 'code'=>404
             ];
-            $response_body = HelperController::getFailedResponse($error,null);
+            $response_body = GetResponseHelper::getFailedResponse($error,null);
             return response($response_body,404);
         });
 
@@ -96,7 +97,7 @@ class Handler extends ExceptionHandler
                 "message"=>$e->getMessage(),
                 'code'=>400
             ];
-            $response_body = HelperController::getFailedResponse($error,null);
+            $response_body = GetResponseHelper::getFailedResponse($error,null);
             return response($response_body,400);
         });
 
@@ -106,7 +107,7 @@ class Handler extends ExceptionHandler
                 "message"=>$e->getMessage(),
                 'code'=>403
             ];
-            $response_body = HelperController::getFailedResponse($error,null);
+            $response_body = GetResponseHelper::getFailedResponse($error,null);
             return response($response_body,403);
         });
 
@@ -116,7 +117,7 @@ class Handler extends ExceptionHandler
                 "message"=>$e->getMessage(),
                 'code'=>401
             ];
-            $response_body = HelperController::getFailedResponse($error,null);
+            $response_body = GetResponseHelper::getFailedResponse($error,null);
             return response($response_body,401);
         });
     }

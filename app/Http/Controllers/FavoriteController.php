@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\GetResponseHelper;
+use App\Helpers\ValidateResourceHelper;
 use App\Models\Favorite;
 use App\Models\FavoritesList;
 use Illuminate\Http\Request;
@@ -16,15 +18,14 @@ class FavoriteController extends Controller
         $favorites_list = $user->favoritesList;
 
         // check product existance
-        HelperController::checkIfNotFound($product, "Product");
+        ValidateResourceHelper::ensureResourceExists($product, "Product");
         
-
         // delete favorite if exists ,else create it 
         $favorite=$favorites_list->favorites()->where("product_id", $product->id)->first();
         if ($favorite){
             $favorite->delete();
             $data = ['action'=>'deleted'];
-            return response(HelperController::getSuccessResponse($data,null) , 200);
+            return response(GetResponseHelper::getSuccessResponse($data,null) , 200);
         }
         
         $data = [
@@ -34,7 +35,7 @@ class FavoriteController extends Controller
         $favorite = Favorite::create($data);
 
         $data = ['favorite' => $favorites_list];
-        return response(HelperController::getSuccessResponse($data,null), 201);
+        return response(GetResponseHelper::getSuccessResponse($data,null), 201);
     }
 
     // returns all favorites of a favorites list (user get other user's favorites)
@@ -44,7 +45,7 @@ class FavoriteController extends Controller
         $search = $request->input('q');
 
         $favorites_list = FavoritesList::find($id);
-        HelperController::checkIfNotFound($favorites_list,"Favorites list");
+        ValidateResourceHelper::ensureResourceExists($favorites_list,"Favorites list");
 
         $favorites = $favorites_list->favorites()->with(['product']);
 
@@ -55,7 +56,7 @@ class FavoriteController extends Controller
             });
         }
 
-        $response = HelperController::getCollectionAndCount($favorites,$sort_by,$pageLimit,null,"favorites");
+        $response = GetResponseHelper::processCollectionFormatting($favorites,$sort_by,$pageLimit,null,"favorites");
         return response($response, 200);
     }
 
@@ -78,7 +79,7 @@ class FavoriteController extends Controller
             });
         }
 
-        $response = HelperController::getCollectionAndCount($favorites,$sort_by,$pageLimit,null,'favorites');
+        $response = GetResponseHelper::processCollectionFormatting($favorites,$sort_by,$pageLimit,null,'favorites');
         return response($response, 200);
     }
 }

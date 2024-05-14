@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\AuthenticationHelper;
+use App\Helpers\GetResponseHelper;
+use App\Helpers\ValidateResourceHelper;
 use App\Http\Resources\FavoritesListResource;
 use App\Models\Favorite;
 use App\Models\FavoritesList;
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Services\Like\LikeService;
 use Exception;
 use Illuminate\Database\QueryException;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -21,7 +25,7 @@ class FavoritesListController extends Controller
 
     // get all public FavoritesLists of all users
     public function listFavoritesList(Request $request){
-        $user_token =  HelperController::getUserAndToken($request);
+        $user_token =  AuthenticationHelper::getUserAndToken($request);
         $current_user = $user_token["user"];
         $pageLimit= ['page'=>$request->input("page"),'limit'=>$request->input("limit")];
         $sort_by = $request->input("sort")?$request->input("sort"):"most popular";
@@ -32,7 +36,7 @@ class FavoritesListController extends Controller
         if ($sort_by=="most popular") $sort_by = "views_count-5*likes_count+ASC";
         if ($search) $favorites_lists = $favorites_lists->where("name","like","%$search%");
 
-        $response_body = HelperController::getCollectionAndCount(
+        $response_body = GetResponseHelper::processCollectionFormatting(
             $favorites_lists,
             $sort_by,$pageLimit,
             null,
@@ -51,45 +55,45 @@ class FavoritesListController extends Controller
         $current_user = $request->user();
 
         $favorites_list = $current_user->favoritesList()->with('favorites')->get();
-        HelperController::checkIfNotFound($favorites_list,"Favorites list");
+        ValidateResourceHelper::ensureResourceExists($favorites_list,"Favorites list");
 
         $resource = new FavoritesListResource($favorites_list,null,$current_user);
-        return HelperController::retrieveResource($resource,'favorites list');
+        return GetResponseHelper::processDataFormating($resource,'favorites list');
     }
 
     // get one FavoritesList by id (user retrieves other user's favorites list)
     public function retrieveById(Request $request ,$id){
-        $user_token =  HelperController::getUserAndToken($request);
+        $user_token =  AuthenticationHelper::getUserAndToken($request);
         $current_user = $user_token["user"];
 
         $favorites_list = FavoritesList::with("favorites")->find($id);
-        HelperController::checkIfNotFound($favorites_list,"Favorites list");
+        ValidateResourceHelper::ensureResourceExists($favorites_list,"Favorites list");
         
         $resource = new FavoritesListResource($favorites_list,null,$current_user);
-        return HelperController::retrieveResource($resource,'favorites list');
+        return GetResponseHelper::processDataFormating($resource,'favorites list');
     }
 
     // like and unlike 
     public function likeFavoritesList(Request $request ,$id){
         $user = $request->user();
         $favorites_list = FavoritesList::find($id);
-        HelperController::checkIfNotFound($favorites_list,"Favorites list");
-        return HelperController::likeOrUnlikeResource($favorites_list, $user, 'likes_count');
+        ValidateResourceHelper::ensureResourceExists($favorites_list,"Favorites list");
+        return LikeService::toggleLikeOnResource($favorites_list, $user, 'likes_count');
     }
 
     // view
     public function viewFavoritesList(Request $request ,$id){
         $favorites_list = FavoritesList::find($id);
-        HelperController::checkIfNotFound($favorites_list,"Favorites list");
+        ValidateResourceHelper::ensureResourceExists($favorites_list,"Favorites list");
 
-        $user_token = HelperController::getUserAndToken($request);
+        $user_token = AuthenticationHelper::getUserAndToken($request);
         $user = $user_token['user'];
         $body  = ["action"=>"viewed"];
 
         // if super-admin or admin view , don't increment number of views
         if ($user && $user->hasRole(['admin','super admin'])){
             $metadata = ["views_count"=>$favorites_list->views_count];
-            $response_body = HelperController::getSuccessResponse($body,$metadata);
+            $response_body = GetResponseHelper::getSuccessResponse($body,$metadata);
             return response($response_body,200);
         }
 
@@ -100,7 +104,7 @@ class FavoritesListController extends Controller
         $favorites_list->update(['views_count' => $new_count]);
 
         $metadata = ["views_count"=>$new_count];
-        $response_body = HelperController::getSuccessResponse($body,$metadata);
+        $response_body = GetResponseHelper::getSuccessResponse($body,$metadata);
 
         return response($response_body,200);
     }
@@ -125,7 +129,7 @@ class FavoritesListController extends Controller
         ]);
 
         $favorites_list = FavoritesList::find($id);
-        HelperController::checkIfNotFound($favorites_list,"Favorites list");
+        ValidateResourceHelper::ensureResourceExists($favorites_list,"Favorites list");
 
         // check if user trying to update is the owner or an admin
         $owner = $favorites_list->user;
@@ -136,7 +140,7 @@ class FavoritesListController extends Controller
         }
 
         if (empty($validated_data)){
-            return response(HelperController::getSuccessResponse(null, null),200);
+            return response(GetResponseHelper::getSuccessResponse(null, null),200);
         }
         
         // if image is present store it at storage/app/public/favoritesListsThumbnails
@@ -156,11 +160,11 @@ class FavoritesListController extends Controller
         }
 
         if ($update){
-            return HelperController::retrieveResource($validated_data,"favorites list");
+            return GetResponseHelper::processDataFormating($validated_data,"favorites list");
         } 
 
         $error = ['message'=>'Update failed.', 'code'=>400];
-        $response_body = HelperController::getFailedResponse($error,null);
+        $response_body = GetResponseHelper::getFailedResponse($error,null);
         return response($response_body,400);
     }
 }

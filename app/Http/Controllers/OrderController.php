@@ -3,10 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\OrderResource;
-use App\Models\Order;
-use Exception;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use App\Helpers\GetResponseHelper;
+
 
 //first status
     //paid : after clients pays 
@@ -45,7 +44,7 @@ class OrderController extends Controller
               ->where("products.name" , 'like' ,"%$search%");
         }
 
-        $response = HelperController::getCollectionAndCount(
+        $response = GetResponseHelper::processCollectionFormatting(
             $orders,
             $sort_by,
             $pageLimt,
@@ -73,7 +72,7 @@ class OrderController extends Controller
               ->where("products.name" , 'like' ,"%$search%");
         }
 
-        $response = HelperController::getCollectionAndCount(
+        $response = GetResponseHelper::processCollectionFormatting(
             $orders,
             $sort_by,
             $pageLimt,

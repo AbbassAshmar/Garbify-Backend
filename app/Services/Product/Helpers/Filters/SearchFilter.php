@@ -4,21 +4,18 @@ namespace App\Services\Product\Helpers\Filters;
 
 use App\Services\Product\Helpers\Filters\Ifilter;
 
-class ColorFilter implements Ifilter{
+class SearchFilter implements Ifilter{
     private $nextHandler;
-    private $color;
+    private $search;
     
-    function __construct($color, Ifilter $nextHandler=null){
-        $this->color = $color;   
+    function __construct($search, Ifilter $nextHandler=null){
+        $this->search = $search;   
         $this->nextHandler = $nextHandler;
     }
 
     public function filter($products){
-        $color = $this->color;
-        if ($this->color){ 
-            $products = $products->whereHas("colors",function($query) use(&$color) {
-                $query->where("color", $color);
-            });
+        if ($this->search){ 
+            $products = $products->where('name','like',"%$this->search%");
         }
 
         if ($this->nextHandler){
@@ -31,4 +28,5 @@ class ColorFilter implements Ifilter{
     public function setNextHandler(Ifilter $nextHandler){
         $this->nextHandler = $nextHandler;
     }
+
 }

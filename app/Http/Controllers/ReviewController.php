@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\TransactionFailedException;
+use App\Helpers\AuthenticationHelper;
+use App\Helpers\GetResponseHelper;
+use App\Helpers\ValidateResourceHelper;
 use App\Http\Resources\ReviewResource;
 use App\Models\Product;
 use Illuminate\Http\Request;
@@ -11,6 +14,7 @@ use App\Models\Review;
 use App\Models\Size;
 use App\Models\Color;
 use App\Models\ReviewsImage;
+use App\Services\Like\LikeService;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Exceptions\UnauthorizedException;
@@ -20,19 +24,19 @@ class ReviewController extends Controller
 {
     // returns all reviews of a product 
     function listReviewsByProduct(Request $request , $product_id){
-        $user_token =  HelperController::getUserAndToken($request);
+        $user_token =  AuthenticationHelper::getUserAndToken($request);
         $current_user = $user_token["user"];
 
         $pageLimit = ['page'=>$request->input("page"), 'limit'=> $request->input('limit')];
         $sort_by = $request->input("sort") ? $request->input("sort") : "helpful_count DESC";
         
         $product = Product::find($product_id);
-        HelperController::checkIfNotFound($product, "Product");
+        ValidateResourceHelper::ensureResourceExists($product, "Product");
         
         $reviews = $product->reviews();
         $average_ratings = floatval($reviews->avg("product_rating"));
 
-        $response = HelperController::getCollectionAndCount(
+        $response = GetResponseHelper::processCollectionFormatting(
             $reviews,
             $sort_by,
             $pageLimit,
@@ -50,7 +54,7 @@ class ReviewController extends Controller
     function deleteReview(Request $request , $id){ 
         $user = $request->user();
         $review = Review::find($id);        
-        HelperController::checkIfNotFound($review,"Review");
+        ValidateResourceHelper::ensureResourceExists($review,"Review");
         
         if ($user->id != $review->user->id && ! $user->hasPermissionTo('delete_any_review')){
             throw new UnauthorizedException(403,'You do not have the required authorization.');
@@ -67,7 +71,7 @@ class ReviewController extends Controller
             'average_ratings' => $average_ratings,
             'total_count'=>$reviews_of_current_product->count()
         ];
-        $response = HelperController::getSuccessResponse($data,$metadata);
+        $response = GetResponseHelper::getSuccessResponse($data,$metadata);
         return response($response,200);
     }
 
@@ -76,17 +80,17 @@ class ReviewController extends Controller
         $user = $request->user();
         
         $product = Product::find($product_id);
-        HelperController::checkIfNotFound($product,'Product');
+        ValidateResourceHelper::ensureResourceExists($product,'Product');
 
         $review = Review::where([["user_id",$user->id] , ["product_id", $product_id]])->first();
         if (!$review) {
-            $response = HelperController::getSuccessResponse(['is_reviewed'=>false],null);
+            $response = GetResponseHelper::getSuccessResponse(['is_reviewed'=>false],null);
             return response($response, 200);
         }
 
         $data = ['is_reviewed'=>true];
         $metadata = ['review_id'=>$review->id];
-        $response = HelperController::getSuccessResponse($data,$metadata);
+        $response = GetResponseHelper::getSuccessResponse($data,$metadata);
         
         return response($response, 200);
     }
@@ -96,8 +100,8 @@ class ReviewController extends Controller
     function likeReview(Request $request, $id){
         $user = $request->user();
         $review = Review::find($id);
-        HelperController::checkIfNotFound($review , "Review");
-        return HelperController::likeOrUnlikeResource($review, $user, 'helpful_count');
+        ValidateResourceHelper::ensureResourceExists($review , "Review");
+        return LikeService::toggleLikeOnResource($review, $user, 'helpful_count');
     }
     
     // create a review 
@@ -122,13 +126,13 @@ class ReviewController extends Controller
 
         //get the product instance 
         $product =Product::find($validated_data['product_id']);
-        HelperController::checkIfNotFound($product,"Product");
+        ValidateResourceHelper::ensureResourceExists($product,"Product");
         
         // check if the user has a review on the product 
         $review = Review::where([["user_id", $user->id],['product_id',$product->id]])->first();
         if ($review) {
             $error = ['message'=>"You have already reviewed this product.", 'code'=>400];
-            $response_body = HelperController::getFailedResponse($error,null);
+            $response_body = GetResponseHelper::getFailedResponse($error,null);
             return response($response_body,400);
         }
 
@@ -166,7 +170,7 @@ class ReviewController extends Controller
             $review = Review::create($data);
         }catch(Exception $e){
             $error = ['message'=>'Something unexpected happened.', 'code'=>400];
-            $response_body = HelperController::getFailedResponse($error,null);
+            $response_body = GetResponseHelper::getFailedResponse($error,null);
             return response($response_body,400);
         }
 
@@ -186,7 +190,7 @@ class ReviewController extends Controller
         }
 
         $data= ['action'=>'created'];
-        $response_body = HelperController::getSuccessResponse($data,null);
+        $response_body = GetResponseHelper::getSuccessResponse($data,null);
         return response($response_body,201);
     }
 }

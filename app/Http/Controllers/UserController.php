@@ -2,21 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\TokenAbility;
+use App\Helpers\AuthenticationHelper;
+use App\Helpers\GetResponseHelper;
 use Illuminate\Http\Request;
-use PhpOption\None;
 use App\Models\User;
-use DateTime;
 use Illuminate\Support\Facades\Hash;
-use DateTimeInterface;
-use Error;
 use Exception;
-use Illuminate\Support\Carbon;
-use Laravel\Sanctum\PersonalAccessToken;
 use App\Models\FavoritesList;
 use App\Models\ShoppingCart;
-use GuzzleHttp\Exception\ServerException;
-use Illuminate\Validation\ValidationData;
 use Illuminate\Validation\ValidationException;
 
 use function PHPUnit\Framework\isEmpty;
@@ -73,23 +66,7 @@ class UserController extends Controller
         }
         return $shopping_cart;
     }
-    //helper
-    public static function create_access_token($user){
-        return $user->createToken('access-token',[TokenAbility::ACCESS_API->value],Carbon::now()->addMinutes(20));
-    }
-
-    public static function create_refresh_token($user){
-        return $user->createToken('refresh-token',[TokenAbility::ISSUE_ACCESS_TOKEN->value],Carbon::now()->addMinutes(2880));
-    }
- 
-    //helper
-    public static function check_token_expiry($token){
-        if ($token->expires_at < Carbon::now()){
-            // token expired
-            return true;
-        }
-        return false; 
-    }
+    
 
     public function register(Request $request){
         $new_user = $this->createUser($request);
@@ -99,19 +76,19 @@ class UserController extends Controller
                  Please try again later.",
                 'code'=>400
             ];
-            $response_body = HelperController::getFailedResponse($error,null);
+            $response_body = GetResponseHelper::getFailedResponse($error,null);
             return response($response_body,400);
         }
         $new_user->assignRole('client');
 
-        $refresh_token = static::create_refresh_token($new_user);
-        $access_token = static::create_access_token($new_user);
+        $refresh_token = AuthenticationHelper::createRefreshToken($new_user);
+        $access_token = AuthenticationHelper::createAccessToken($new_user);
     
         $data=[
             'user'=>$new_user,
             'token'=>$access_token->plainTextToken,
         ];
-        $response_body = HelperController::getSuccessResponse($data,null);
+        $response_body = GetResponseHelper::getSuccessResponse($data,null);
         $cookie = cookie('refresh_token',$refresh_token->plainTextToken,2880);
 
         return response($response_body,201)->withCookie($cookie);
@@ -138,14 +115,14 @@ class UserController extends Controller
         $user->tokens()->delete();
 
         // create an access token and a refresh token
-        $access_token =static::create_access_token($user)->plainTextToken;
-        $refresh_token =static::create_refresh_token($user)->plainTextToken;
+        $access_token =AuthenticationHelper::createAccessToken($user)->plainTextToken;
+        $refresh_token =AuthenticationHelper::createRefreshToken($user)->plainTextToken;
 
         $data=[
             'user'=>$user,
             'token'=>$access_token,
         ];
-        $response_body = HelperController::getSuccessResponse($data,null);
+        $response_body = GetResponseHelper::getSuccessResponse($data,null);
         $cookie = cookie('refresh_token',$refresh_token->plainTextToken,2880);
 
         return response($response_body,201)->withCookie($cookie);
@@ -157,14 +134,14 @@ class UserController extends Controller
             //delete all user's tokens 
             $user->tokens()->delete();
             $data = ['action'=>'deleted'];
-            return response(HelperController::getSuccessResponse($data,null),200);
+            return response(GetResponseHelper::getSuccessResponse($data,null),200);
         }catch(Exception $e){
             $error = [
                 'message'=>"An unexpected error occurred while processing your request. 
                  Please try again later.",
                 'code'=>500
             ];
-            return response(HelperController::getFailedResponse($error,null),500);
+            return response(GetResponseHelper::getFailedResponse($error,null),500);
         }
     }
 
@@ -176,13 +153,13 @@ class UserController extends Controller
                  Please try again later.",
                 'code'=>400
             ];
-            $response_body = HelperController::getFailedResponse($error,null);
+            $response_body = GetResponseHelper::getFailedResponse($error,null);
             return response($response_body,400);
         }
         
         $new_user->assignRole('admin');
         $body = ['user'=>$new_user];
-        $response_body = HelperController::getSuccessResponse($body,null);
+        $response_body = GetResponseHelper::getSuccessResponse($body,null);
         
         return response($response_body, 201);
     }
@@ -229,7 +206,7 @@ class UserController extends Controller
         ]);
 
         if (empty($validated_data)){
-            return response(HelperController::getSuccessResponse(null, null),200);
+            return response(GetResponseHelper::getSuccessResponse(null, null),200);
         }
 
         // remove old password and confirm password from the update array
@@ -262,11 +239,11 @@ class UserController extends Controller
         }
 
         if ($update){
-            return HelperController::retrieveResource($validated_data,"user");
+            return GetResponseHelper::processDataFormating($validated_data,"user");
         } 
 
         $error = ['message'=>'Update failed.', 'code'=>400];
-        $response_body = HelperController::getFailedResponse($error,null);
+        $response_body = GetResponseHelper::getFailedResponse($error,null);
         return response($response_body,400);
     }  
 
