@@ -18,7 +18,6 @@ return new class extends Migration
             $table->string("image_details")->nullable();
             $table->string("image_url")->unique();
             $table->foreignId("color_id")->nullable()->constrained()->onDelete("set null");
-            $table->foreignId("size_id")->nullable()->constrained()->onDelete("set null");
             $table->boolean("is_thumbnail")->default(false)->nullable();
         });
     }

@@ -47,10 +47,9 @@ class Handler extends ExceptionHandler
             //remove "" from validation
             foreach($error['details'] as $key=>$arr){
                 for ($i=0 ; $i<count($arr); $i++){
-                    if ($arr[$i] === ""){
-                        unset($arr[$i]);
-                    }
+                    if ($arr[$i] === "") unset($arr[$i]);
                 }
+                
                 if (count($arr) == 0 ){
                     unset($error['details'][$key]);
                 }

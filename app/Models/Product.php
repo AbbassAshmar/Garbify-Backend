@@ -13,6 +13,7 @@ class Product extends Model
     protected $appends =[
         'thumbnail'
     ];
+
     protected $fillable = [
         'category_id' , 
         'name', 
@@ -23,8 +24,7 @@ class Product extends Model
         'quantity'
     ];
  
-
-     /**
+    /**
     * Product is child in the relationship 
     * Get the categories. each product has only one category : use belongsTo
     */

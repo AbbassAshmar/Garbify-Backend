@@ -45,10 +45,11 @@ Route::post("/access_tokens", [AccessTokenController::class, 'createAccessToken'
 
 // Products Controller Routes 
 Route::get("/products", [ProductController::class, "listProducts"]);
-Route::get("/products/popular",[ProductController::class, "listPopularProducts"]);
+Route::get("/products/popular", [ProductController::class, "listPopularProducts"]);
 Route::get("/products/{id}", [ProductController::class, "retrieveProduct"]);
 Route::get("/products/{id}/colors", [ProductController::class, "productColor"]);
-Route::get("/products/{id}/sizes",[ProductController::class, "productSize"]);
+Route::get("/products/{id}/sizes", [ProductController::class, "productSize"]);
+Route::post("/products", [ProductController::class , "createProduct"]);
 
 // Filter Controller Routes
 

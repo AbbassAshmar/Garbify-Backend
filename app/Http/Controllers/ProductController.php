@@ -11,6 +11,7 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use App\Services\Product\ProductService;
 
+use App\Http\Requests\CreateProductRequest;
 // get() returns a collection with conditions (where() orderBy()..) : returns QuerySet
 // first() returns the first instance                               : returns Object
 // find() finds based on id , find(1) similar to first()            : returns Object
@@ -26,7 +27,6 @@ class ProductController extends Controller{
         $this->productService = $productService;
     }
 
-    // get all
     public function listProducts(Request $request){
         $color = $request->input("color");
         $size = $request->input("size");
@@ -63,14 +63,8 @@ class ProductController extends Controller{
     public function listPopularProducts(Request $request){
         $limit = $request->input("limit");
         $page= $request->input("page");
-        $search = $request->input("search");
 
-        $products = Product::select("products.*")
-        ->leftJoin("order_details", 'products.id', '=','order_details.product_id')
-        ->join('orders','order_details.order_id','=','orders.id')
-        ->groupBy('products.id')->orderByRaw("sum(order_details.ordered_quantity) DESC");
-
-        //pagination applied for filter results
+        $products = $this->productService->getPopularProducts();
         $products = GetResponseHelper::processCollectionFormatting(
             $products,
             ['page'=>$page,'limit'=>$limit],
@@ -82,26 +76,58 @@ class ProductController extends Controller{
         return response($products,200);
     }
 
+    // sizes = [
+    //     {
+    //         value : 'large',
+    //         measurement_unit : 'size',
+    //         attributes : [
+    //             {
+    //                 value : '10',
+    //                 measurement_unit : 'width(inches)',
+    //             }
+    //             {
+    //                 value : '20',
+    //                 measurement_unit : 'length(inches)',
+    //             }
+    //         ]
+    //     },
+    //     {
+    //         value : 'small',
+    //         measurement_unit : 'size',
+    //         attributes : [
+    //             {
+    //                 value : '20',
+    //                 measurement_unit : 'width(inches)',
+    //             }
+    //             {
+    //                 value : '40',
+    //                 measurement_unit : 'length(inches)',
+    //             }
+    //         ]
+    //     }
+    // ]
+    
+    public function createProduct(CreateProductRequest $request){
+        $data = $request->validated();
+        return response([], 201);
+        $product = $this->productService->createProduct($data);
+    }
 
     public function retrieveProduct(Request $request , $id){
-        $product = Product::find($id);
-        ValidateResourceHelper::ensureResourceExists($product, 'Product');
+        $product = $this->productService->getByID($id);
         $product_arr = (new ProductFullResource($product))->toArray($request);
         $response = GetResponseHelper::getSuccessResponse(['product'=>$product_arr],null);
         return response($response, 200);
     }
 
-    
     public function productSize(Request $request , $id){
-        $product = Product::find($id);
-        ValidateResourceHelper::ensureResourceExists($product, 'Product');
+        $product = $this->productService->getByID($id);
         $response = GetResponseHelper::getSuccessResponse(['sizes'=>$product->sizes_array],null);
         return response($response,200);
     }
 
     public function productColor(Request $request ,$id){
-        $product = Product::find($id);
-        ValidateResourceHelper::ensureResourceExists($product, 'Product');
+        $product = $this->productService->getByID($id);
         $response = GetResponseHelper::getSuccessResponse(['sizes'=>$product->colors_array],null);
         return response($response,200);
     }
