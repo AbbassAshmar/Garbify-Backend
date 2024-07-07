@@ -9,9 +9,16 @@ class AlternativeSize extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['size','unit', 'size_id'];
+    protected $fillable = ['size','unit'];
+    protected $hidden = ['created_at', 'updated_at','pivot'];
 
-    public function size(){
-        return $this->belongsTo(Size::class);
+    public function sizes(){
+        return $this->belongsToMany(Size::class, 'sizes_alternative_sizes', 'alternative_size_id','size_id');
+
     }
+
+    public function products(){
+        return $this->belongsToMany(Product::class, 'products_alternative_sizes', 'alternative_size_id', 'product_id');
+    }
+
 }

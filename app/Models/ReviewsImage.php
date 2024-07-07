@@ -15,8 +15,12 @@ class ReviewsImage extends Model
     public function review(){
         return $this->belongsTo(Review::class);
     }
+    
+    function getImageUrlAttribute(){
+        if (!isset($this->attributes['image_url']) || !$this->attributes['image_url']) 
+        return null;
 
-    public function image_url(){
-        return asset('/storage/reviewsImages/'.$this->attributes['image_url']);
+        return asset($this->attributes['image_url']);
     }
+
 }

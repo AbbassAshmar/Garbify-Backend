@@ -23,7 +23,7 @@ class Sale extends Model
     }
 
     public function getPriceAfterSaleAttribute(){
-        return $this->product->price - ( $this->product->price * ($this->sale_percentage / 100));
+        return $this->product->selling_price - ( $this->product->selling_price * ($this->sale_percentage / 100));
     }
 
     public function checkIfQuantitySufficient($demand){

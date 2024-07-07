@@ -13,32 +13,37 @@ class ProductResource extends JsonResource
      *
      * @return array<string, mixed>
      */
+    
+    // returns an object where colors are keys and lists of images are values accordingly
+    public function colorsImagesObject(array $colors){
+        $obj = []; 
+        foreach ($colors as $color){
+            $obj[$color] =$this->images()->whereHas("color", function($query)use(&$color){
+                $query->where("color",$color);
+            })->get();
+        }
+        return $obj;
+    }
+
 
     public function toArray(Request $request): array
     {
-        // return parent::toArray($request);
         return [
             'id' =>$this->id,
             'name' => $this->name,
             'quantity' =>$this->quantity,
-            'price' =>$this->price,
+            'original_price' =>$this->original_price,
+            'selling_price' =>$this->selling_price,
             'type' =>$this->type,
-            "colors" =>$this->colors_array,
+            "colors" =>$this->colors,
+            "sizes" =>$this->sizesAndAlternatives(),
             "created_at"=>$this->created_at,
-            "sale" => $this->when($this->current_sale ,$this->current_sale?
-                [
-                    'price_after_sale'=>$this->current_sale->price_after_sale,
-                    'percentage'=>$this->current_sale->sale_percentage,
-                    'starts_at' => $this->current_sale->starts_at,
-                    'ends_at' => $this->current_sale->ends_at,
-                ]
-                :null
-            ),
-            'reviews_summary'=>[
-                'average_ratings'=> $this->average_ratings,
-                'reviews_count' =>$this->reviews_count,
-            ],
-            "thumbnail" =>  new ProductsImageResource($this->thumbnail),
+            'description' =>$this->description,
+            'category' => $this->category,
+            'reviews_summary'=> $this->reviews_summary,
+            "sale" => $this->current_sale,
+            'images' => $this->colorsImagesObject($this->colors_array),
+            "thumbnail" => $this->thumbnail,
         ];
     }
 }

@@ -18,7 +18,6 @@ class ProductsImageResource extends JsonResource
         return  [
             "image_details" => $this->image_details,
             "color" =>$this->color? $this->color->color:null,
-            "size" => $this->size? $this->size->size :null,
             "url" => $this->image_url
         ];
     }

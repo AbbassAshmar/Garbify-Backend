@@ -16,7 +16,6 @@ return new class extends Migration
             $table->timestamps();
             $table->string("size");
             $table->string("unit");
-            $table->foreignId("size_id")->constrained()->onDelete("cascade");
         });
     }
 

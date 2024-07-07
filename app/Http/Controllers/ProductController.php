@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Helpers\GetCategoriesHelper;
 use App\Helpers\GetResponseHelper;
 use App\Helpers\ValidateResourceHelper;
-use App\Http\Resources\ProductFullResource;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\Request;
@@ -53,7 +52,7 @@ class ProductController extends Controller{
             $products,
             $sort_by,
             $pageLimit,
-            ProductResource::class,
+            null,
             'products'
         );
 
@@ -69,43 +68,12 @@ class ProductController extends Controller{
             $products,
             ['page'=>$page,'limit'=>$limit],
             null,
-            ProductResource::class,
+            null,
             'products'
         );
 
         return response($products,200);
     }
-
-    // sizes = [
-    //     {
-    //         value : 'large',
-    //         measurement_unit : 'size',
-    //         attributes : [
-    //             {
-    //                 value : '10',
-    //                 measurement_unit : 'width(inches)',
-    //             }
-    //             {
-    //                 value : '20',
-    //                 measurement_unit : 'length(inches)',
-    //             }
-    //         ]
-    //     },
-    //     {
-    //         value : 'small',
-    //         measurement_unit : 'size',
-    //         attributes : [
-    //             {
-    //                 value : '20',
-    //                 measurement_unit : 'width(inches)',
-    //             }
-    //             {
-    //                 value : '40',
-    //                 measurement_unit : 'length(inches)',
-    //             }
-    //         ]
-    //     }
-    // ]
     
     public function createProduct(CreateProductRequest $request){
         $data = $request->validated();
@@ -123,8 +91,8 @@ class ProductController extends Controller{
 
     public function retrieveProduct(Request $request , $id){
         $product = $this->productService->getByID($id);
-        $product_arr = (new ProductFullResource($product))->toArray($request);
-        $response = GetResponseHelper::getSuccessResponse(['product'=>$product_arr],null);
+        $product = (new ProductResource($product))->toArray($request);
+        $response = GetResponseHelper::getSuccessResponse(['product'=>$product],null);
         return response($response, 200);
     }
 

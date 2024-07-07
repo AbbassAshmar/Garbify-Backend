@@ -9,15 +9,16 @@ use Symfony\Component\Mime\Part\Multipart\AlternativePart;
 class Size extends Model
 {
     protected $fillable = ['size','unit'];
-
+    protected $hidden = ['created_at', 'updated_at','pivot'];
+    
     use HasFactory;
 
     function products(){
         return $this->belongsToMany(Product::class, "products_sizes","size_id","product_id");
     }
 
-    public function images(){
-        return $this->hasMany(ProductsImage::class);
+    public function alternativeSizes(){
+        return $this->belongsToMany(AlternativeSize::class, 'sizes_alternative_sizes', 'size_id','alternative_size_id');
     }
 
     public function reviews(){
@@ -26,10 +27,6 @@ class Size extends Model
 
     public function orderDetails(){
         return $this->hasMany(OrderDetail::class);
-    }
-
-    public function alternativeSizes(){
-        return $this->hasMany(AlternativeSize::class);
     }
 
     public function shoppingCartItems(){
@@ -45,7 +42,4 @@ class Size extends Model
         }
         return $arr;
     }
-
-
-   
 }

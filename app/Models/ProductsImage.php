@@ -9,6 +9,7 @@ class ProductsImage extends Model
 {
     use HasFactory;
     protected $appends = ['image_url'];
+    protected $hidden = ['created_at', 'updated_at','color_id'];
     protected $fillable= [
         'product_id',
         'color_id',
@@ -25,8 +26,12 @@ class ProductsImage extends Model
     }
  
     //overrides image_url attribute to include domain name and path
-    public function getImageUrlAttribute(){
-        return asset('/storage/productsImages/'.$this->attributes['image_url']);        
+    function getImageUrlAttribute(){
+        if (!isset($this->attributes['image_url']) || !$this->attributes['image_url']) 
+        return null;
+
+        return asset($this->attributes['image_url']);
     }
+
 }
 

@@ -22,6 +22,7 @@ use App\Models\Size;
 use App\Models\Tag;
 use App\Services\Product\Helpers\Filters\SearchFilter;
 use Exception;
+use Illuminate\Support\Facades\Storage;
 
 class ProductService {
     private $getCategoriesHelper;
@@ -31,7 +32,7 @@ class ProductService {
     }
 
     public function getAll($filters){
-        $products =  Product::with([]);
+        $products =  Product::with(['category',]);
 
         $searchFilter = new SearchFilter($filters['search']);
         $colorFilter = new ColorFilter($filters['color'], $searchFilter);
@@ -85,9 +86,8 @@ class ProductService {
             $image = $validated_data['thumbnail_data']['image'];
             $color_instance = Color::firstOrCreate(['color'=>$color]);
 
-            $name = $image->hashName();
-            $path= $image->storeAs('/public/productImages',$name);
-            $thumbnail_url= basename($path);
+            $path = Storage::putFile('public/productImages', $image);
+            $thumbnail_url = Storage::url($path); // stored at storage/public/ca.. , accessed by public/storage/ca..
 
             ProductsImage::create([
                 'color_id'=>$color_instance->id, 
@@ -104,13 +104,12 @@ class ProductService {
                 $color_instance = Color::firstOrCreate(['color'=>$color]);
 
                 foreach($images_data['images'] as $image){
-                    $name = $image->hashName();
-                    $path= $image->storeAs('/public/productImages',$name);
-                    $image_url= basename($path);
+                    $path = Storage::putFile('public/productImages', $image);
+                    $imageUrl = Storage::url($path); // stored at storage/public/ca.. , accessed by public/storage/ca..
 
                     ProductsImage::create([
                         'color_id'=>$color_instance->id, 
-                        'image_url'=>$image_url,
+                        'image_url'=>$imageUrl,
                         'is_thumbnail' => false,
                         'product_id' => $product_instance->id
                     ]);
@@ -168,11 +167,13 @@ class ProductService {
 
                 if (isset($size_data['attributes'])){
                     foreach($size_data['attributes'] as $attribute){
-                        AlternativeSize::firstOrCreate([
+                        $alt = AlternativeSize::firstOrCreate([
                             'size'=>$attribute['value'], 
-                            'size_id'=>$size_instance->id,
                             'unit'=>$attribute['measurement_unit'], 
                         ]);
+
+                        $alt->sizes()->attach($size_instance->id);
+                        $alt->products()->attach($product_instance->id);
                     }
                 }
             }

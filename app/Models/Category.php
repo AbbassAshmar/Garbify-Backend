@@ -13,8 +13,8 @@ class Category extends Model
     use HasRecursiveRelationships;
 
     protected $fillable = ['category', 'description', 'parent_id', 'display_name', 'image_url'];
-    protected $hidden = ['updated_at'];
     protected $appends = ["image_url", "total_products", "total_sales"];
+    protected $hidden = ['created_at', 'updated_at'];
 
     function products(){
         return $this->hasMany(Product::class);
@@ -23,7 +23,7 @@ class Category extends Model
 
     // accessors 
 
-    function getImageURLAttribute(){
+    function getImageUrlAttribute(){
         if (!isset($this->attributes['image_url']) || !$this->attributes['image_url']) 
         return null;
 

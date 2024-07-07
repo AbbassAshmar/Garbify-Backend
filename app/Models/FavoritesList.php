@@ -47,7 +47,7 @@ class FavoritesList extends Model
 
     public function getThumbnailAttribute(){
         if ($this->attributes['thumbnail'])
-        return asset('/storage/favoritesListsThumbnails/'.$this->attributes['thumbnail']);
+        return asset($this->attributes['thumbnail']);
 
         //if no thumbnail return first favorite thumb
         $products_thumb = $this->favorites()->first()->product->thumbnail; 
@@ -55,7 +55,7 @@ class FavoritesList extends Model
         return $products_thumb->image_url;
 
         // return default
-        return asset('/storage/favoritesListsThumbnails/'."defaultFavoritesListThumbnail.png"); 
+        return null;
     }
  
 }

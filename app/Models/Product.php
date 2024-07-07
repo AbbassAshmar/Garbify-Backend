@@ -11,7 +11,9 @@ class Product extends Model
 {
     use HasFactory;
     protected $appends =[
-        'thumbnail'
+        'thumbnail',
+        'current_sale',
+        'reviews_summary'
     ];
 
     protected $fillable = [
@@ -24,6 +26,10 @@ class Product extends Model
         'type', 
         'quantity',
         'status',
+    ];
+
+    protected $hidden = [
+        "category_id",
     ];
 
     public function category(){
@@ -42,10 +48,13 @@ class Product extends Model
         return $this->belongsToMany(Size::class, "products_sizes","product_id","size_id");
     }
 
+    public function alternativeSizes(){
+        return $this->belongsToMany(AlternativeSize::class, "products_alternative_sizes","product_id","alternative_size_id");
+    }
+
     public function tags(){
         return $this->belongsToMany(Tag::class,"products_tags", "product_id","tag_id");
     }
-
 
     public function reviews(){
         return $this->hasMany(Review::class);
@@ -66,12 +75,13 @@ class Product extends Model
     public function shoppingCartItems(){
         return $this->hasMany(ShoppingCartItem::class);
     }
+    
+
+
+    // Accessors
 
     public function getThumbnailAttribute(){
-        $thumbnail=  $this->images()->where("is_thumbnail",true)->first();
-        if (!$thumbnail){
-            $thumbnail = ProductsImage::where("image_url", "defaultProductImage.png")->first();
-        }
+        $thumbnail = $this->images()->with('color')->where("is_thumbnail",true)->first();
         return $thumbnail;
     }
 
@@ -107,7 +117,12 @@ class Product extends Model
         foreach($this->sizes()->get() as $s){
             array_push($c ,$s->size);
         }
+
         return $c;
+    }
+
+    public function sizesAndAlternatives(){
+        return $this->sizes()->with('alternativeSizes')->get();
     }
 
     public function getCurrentSaleAttribute(){
@@ -125,7 +140,6 @@ class Product extends Model
         return $this->price;
     }
 
-
     public function getColorsArrayAttribute(){
         $c=[] ;
         foreach($this->colors()->get() as $col){
@@ -134,12 +148,19 @@ class Product extends Model
         return $c;
     }
    
-    public function getAverageRatingsAttribute(){
+    public function averageRatings(){
         return $this->reviews->avg("product_rating");
     }
 
-    public function getReviewsCountAttribute(){
+    public function reviewsCount(){
         return $this->reviews->count();
+    }
+
+    public function getReviewsSummaryAttribute(){
+        return [
+            'average_ratings'=> $this->averageRatings(),
+            'reviews_count' =>$this->reviewsCount(),
+        ];
     }
 
 }
