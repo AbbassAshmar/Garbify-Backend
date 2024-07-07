@@ -2,17 +2,44 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Staudenmeir\LaravelAdjacencyList\Eloquent\HasRecursiveRelationships;
 
 class Category extends Model
 {
     use HasFactory;
-    protected $fillable = ['category', 'parent_id'];
-    protected $hidden = ['parent_id','created_at', 'updated_at'];
+    use HasRecursiveRelationships;
+
+    protected $fillable = ['category', 'description', 'parent_id', 'display_name', 'image_url'];
+    protected $hidden = ['updated_at'];
+    protected $appends = ["image_url", "total_products", "total_sales"];
 
     function products(){
         return $this->hasMany(Product::class);
     }
-   
+
+
+    // accessors 
+
+    function getImageURLAttribute(){
+        if (!isset($this->attributes['image_url']) || !$this->attributes['image_url']) 
+        return null;
+
+        return asset($this->attributes['image_url']);
+    }
+
+    function getTotalSalesAttribute(){
+        return $this->products()
+            ->join('order_details', 'products.id', '=', 'order_details.product_id')
+            ->where('products.category_id', $this->id)
+            ->sum('order_details.amount_total');
+    }
+
+    function getTotalProductsAttribute(){
+        return $this->products()->count();
+    }
+
+    
 }

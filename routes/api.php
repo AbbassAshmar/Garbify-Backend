@@ -2,6 +2,7 @@
 
 use App\Enums\TokenAbility;
 use App\Http\Controllers\AccessTokenController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\FavoritesListController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\StripeController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
+use App\Models\Category;
 use Stripe\Stripe;
 
 /*
@@ -57,10 +59,13 @@ Route::get("/filters",[FilterController::class, "show"]);
 
 // Navbar Controller Routes
 
-Route::get("/categories", [NavbarController::class, "show"]);
-// Route::get("/categories/flat") 
-// Route::get("/categories/nested");
-
+Route::post("/categories", [CategoryController::class, "createCategory"]);
+Route::get("/categories/flat", [CategoryController::class, "listCategoriesFlat"]);
+Route::get("/categories/nested", [CategoryController::class, "listCategoriesNested"]);
+Route::get("/categories/nested-depth-1",[CategoryController::class, "listCategoriesNested"]);
+Route::get("/categories/sales", [CategoryController::class, "listSalesCategories"]);
+Route::get("/categories/new-arrivals", [CategoryController::class, "listNewArrivalsCategories"]);
+Route::get("/categories/{id}", [CategoryController::class, "getCategory"]);
 // Stripe Controller Routes 
 
 Route::post('/checkout/products',[StripeController::class, "checkoutProducts"])->middleware(["auth:sanctum",'ability:'. TokenAbility::ACCESS_API->value]);

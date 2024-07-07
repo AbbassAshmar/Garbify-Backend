@@ -20,7 +20,7 @@ return new class extends Migration
             // constrained : creates the connection based on "category_id" name
             $table->foreignId("category_id")->onDelete("cascade")->constrained();
 
-            $table->decimal("original_pice",8,2,true)->default(0,0);
+            $table->decimal("original_price",8,2,true)->default(0,0);
             $table->decimal("selling_price",8,2,true)->default(0,0);
             
             $table->string("status",64)->default("in stock");

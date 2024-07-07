@@ -18,16 +18,14 @@ class Product extends Model
         'category_id' , 
         'name', 
         'created_at',
-        'price', 
+        'original_price', 
+        'selling_price', 
         'description', 
         'type', 
-        'quantity'
+        'quantity',
+        'status',
     ];
- 
-    /**
-    * Product is child in the relationship 
-    * Get the categories. each product has only one category : use belongsTo
-    */
+
     public function category(){
         return $this->belongsTo(Category::class);
     }
@@ -43,6 +41,11 @@ class Product extends Model
     public function sizes(){
         return $this->belongsToMany(Size::class, "products_sizes","product_id","size_id");
     }
+
+    public function tags(){
+        return $this->belongsToMany(Tag::class,"products_tags", "product_id","tag_id");
+    }
+
 
     public function reviews(){
         return $this->hasMany(Review::class);

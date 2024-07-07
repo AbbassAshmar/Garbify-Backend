@@ -17,11 +17,11 @@ class GetResponseHelper {
         return $response;
     }
 
-    public static function getFailedResponse($error,$metadata){
+    public static function getFailedResponse($error,$metadata, $data=null){
         $response = [
             "status" => "failed",
             "error" => $error,
-            "data" => null,
+            "data" => $data,
             "metadata" => $metadata
         ];
         return $response;

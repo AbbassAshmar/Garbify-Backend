@@ -13,7 +13,15 @@ use App\Services\Product\Helpers\Filters\NewArrivalFilter;
 use App\Services\Product\Helpers\Filters\CategoryFilter;
 
 use App\Helpers\GetCategoriesHelper;
+use App\Helpers\GetResponseHelper;
+use App\Models\AlternativeSize;
+use App\Models\Color;
+use App\Models\ProductsImage;
+use App\Models\Sale;
+use App\Models\Size;
+use App\Models\Tag;
 use App\Services\Product\Helpers\Filters\SearchFilter;
+use Exception;
 
 class ProductService {
     private $getCategoriesHelper;
@@ -51,8 +59,153 @@ class ProductService {
         return $products;
     }
 
-    public function createProduct($data){
+    public function createProduct($validated_data){
+        // fields to create a review instance 
+        $data = [
+            'name'=> $validated_data['name'],
+            'quantity' => $validated_data['quantity'],
+            'category_id'=> $validated_data['category_id'],
+            'description' =>$validated_data['description'],
+            'type' => $validated_data['type'],
+            'original_price' => $validated_data['original_price'],
+            'selling_price' => $validated_data['selling_price'],
+            'status' => $validated_data['status'],
+        ];
+
         
+        try {
+            $product_instance = Product::create($data);
+        }catch(Exception $e){
+            return null;
+        }
+        
+        // create the thumbnail instance 
+        if(isset($validated_data['thumbnail_data'])){
+            $color = $validated_data['thumbnail_data']['color'];
+            $image = $validated_data['thumbnail_data']['image'];
+            $color_instance = Color::firstOrCreate(['color'=>$color]);
+
+            $name = $image->hashName();
+            $path= $image->storeAs('/public/productImages',$name);
+            $thumbnail_url= basename($path);
+
+            ProductsImage::create([
+                'color_id'=>$color_instance->id, 
+                'image_url'=>$thumbnail_url,
+                'is_thumbnail' => true,
+                'product_id' => $product_instance->id
+            ]);
+        }
+
+
+        // create other images instances
+        if (isset($validated_data['images_data'])){
+            foreach($validated_data['images_data'] as $images_data) {
+                $color_instance = Color::firstOrCreate(['color'=>$color]);
+
+                foreach($images_data['images'] as $image){
+                    $name = $image->hashName();
+                    $path= $image->storeAs('/public/productImages',$name);
+                    $image_url= basename($path);
+
+                    ProductsImage::create([
+                        'color_id'=>$color_instance->id, 
+                        'image_url'=>$image_url,
+                        'is_thumbnail' => false,
+                        'product_id' => $product_instance->id
+                    ]);
+                }
+            }
+        }
+
+        // get or create tags instances
+        if (isset($validated_data['tags'])){
+            foreach ($validated_data['tags'] as $tag){
+                $tag_instance = Tag::firstOrCreate(['name', $tag]);
+                $product_instance->tags()->attach($tag_instance->id);
+            }
+        }
+
+        // get or create sizes and alternative sizes for each size 
+        if (isset($validated_data['sizes_data'])) {
+            // Collect all unique measurement units from the sizes data
+            $measurementUnits = [];
+        
+            foreach ($validated_data['sizes_data'] as $size_data) {
+                if (isset($size_data['attributes'])) {
+                    foreach ($size_data['attributes'] as $attribute) {
+                        $measurementUnits[$attribute['measurement_unit']] = true;
+                    }
+                }
+            }
+        
+            // Ensure each size has all measurement units
+            foreach ($validated_data['sizes_data'] as &$size_data) {
+                if (!isset($size_data['attributes'])) {
+                    $size_data['attributes'] = [];
+                }
+        
+                // Create a map for quick lookup of existing attributes
+                $existingAttributes = [];
+                foreach ($size_data['attributes'] as $attribute) {
+                    $existingAttributes[$attribute['measurement_unit']] = $attribute['value'];
+                }
+        
+                // Add missing attributes with "N/A"
+                foreach ($measurementUnits as $unit => $value) {
+                    if (!isset($existingAttributes[$unit])) {
+                        $size_data['attributes'][] = [
+                            'value' => 'N/A',
+                            'measurement_unit' => $unit
+                        ];
+                    }
+                }
+            }
+
+            foreach ($validated_data['sizes_data'] as $size_data){
+                $size_instance = Size::firstOrCreate(['size'=>$size_data['value'], 'unit' => $size_data['measurement_unit']]);
+                $product_instance->sizes()->attach($size_instance->id);
+
+                if (isset($size_data['attributes'])){
+                    foreach($size_data['attributes'] as $attribute){
+                        AlternativeSize::firstOrCreate([
+                            'size'=>$attribute['value'], 
+                            'size_id'=>$size_instance->id,
+                            'unit'=>$attribute['measurement_unit'], 
+                        ]);
+                    }
+                }
+            }
+        }
+
+        // get or create colors instances 
+        if (isset($validated_data['colors'])){
+            foreach($validated_data['colors'] as $color){
+                $color_instance = Color::firstOrCreate(['color'=>$color]);
+                $product_instance->colors()->attach($color_instance->id);
+            }
+        }   
+
+        // create sale instance 
+        if (isset($validated_data['sale']) && $validated_data['sale']){
+            $sale = [
+                'product_id' => $product_instance->id,
+                'starts_at' => $validated_data['sale_start_date'],
+                'sale_percentage' => $validated_data['discount_percentage']
+            ];
+
+            if (isset($validated_data['sale_end_date'])){
+                $sale['sale_end_date'] = $validated_data['sale_end_date'];
+            }       
+
+            if (isset($validated_data['sale_quantity'])){
+                $sale['sale_quantity'] = $validated_data['sale_quantity'];
+            }
+            
+            Sale::create($sale);
+        }
+
+        return $product_instance;
     }
 
 }

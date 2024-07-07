@@ -109,8 +109,16 @@ class ProductController extends Controller{
     
     public function createProduct(CreateProductRequest $request){
         $data = $request->validated();
-        return response([], 201);
         $product = $this->productService->createProduct($data);
+
+        if ($product == null){
+            $error = ['message'=>'Something unexpected happened.', 'code'=>400];
+            $response_body = GetResponseHelper::getFailedResponse($error,null);
+            return response($response_body,400);
+        }
+
+        $payload = GetResponseHelper::getSuccessResponse(['action' => 'created'],null);
+        return response($payload, 201);
     }
 
     public function retrieveProduct(Request $request , $id){
