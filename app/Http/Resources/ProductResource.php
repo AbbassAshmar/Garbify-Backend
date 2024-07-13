@@ -35,6 +35,7 @@ class ProductResource extends JsonResource
             'original_price' =>$this->original_price,
             'selling_price' =>$this->selling_price,
             'type' =>$this->type,
+            'tags' => $this->tags,
             "colors" =>$this->colors,
             "sizes" =>$this->sizesAndAlternatives(),
             "created_at"=>$this->created_at,

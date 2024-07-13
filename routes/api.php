@@ -2,6 +2,7 @@
 
 use App\Enums\TokenAbility;
 use App\Http\Controllers\AccessTokenController;
+use App\Http\Controllers\AuthenticationController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\FavoriteController;
@@ -36,14 +37,22 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 // authentication Routes 
 
-Route::post("/register",[UserController::class, 'register']);
-Route::post('/login', [UserController::class , 'login']);
-Route::post("/register/admin" ,[UserController::class, "adminRegister"])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value,'permission:register_admin']);
-Route::post('/logout',[UserController::class, 'logout'])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
-Route::patch("/users/user", [UserController::class,'updateUser'])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
-
+Route::post("/register",[AuthenticationController::class, 'register']);
+Route::post('/login', [AuthenticationController::class , 'login']);
+Route::post('/logout',[AuthenticationController::class, 'logout'])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
 // create a middleware that validates access token by retrieving it from http-only cookie instead of Authorization header 
-Route::post("/access_tokens", [AccessTokenController::class, 'createAccessToken'])->middleware(['add_refresh_token_header','auth:sanctum','ability:'. TokenAbility::ISSUE_ACCESS_TOKEN->value]);
+Route::post("/access_tokens", [AuthenticationController::class, 'refreshAccessToken'])->middleware(['add_refresh_token_header','auth:sanctum','ability:'. TokenAbility::ISSUE_ACCESS_TOKEN->value]);
+
+// user Routes
+Route::get("/users", [UserController::class,'listUsers'])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
+
+Route::get("/users/{id}", [UserController::class,'retrieveUsers'])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
+// Route::patch("/users/{id}", [UserController::class,'updateUser'])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
+
+Route::patch("/users/user", [UserController::class,'updateUser'])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
+Route::post("/users/admin", [UserController::class,'createAdmin'])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
+Route::post("/users/clients", [UserController::class,'createClient'])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
+
 
 // Products Controller Routes 
 Route::get("/products", [ProductController::class, "listProducts"]);

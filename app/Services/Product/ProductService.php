@@ -92,14 +92,14 @@ class ProductService {
 
     function addSizesToProduct($sizes, $product){
         foreach ($sizes as $size_data){
-            $size_instance = Size::firstOrCreate(['size'=>$size_data['value'], 'unit' => $size_data['measurement_unit']]);
+            $size_instance = Size::firstOrCreate(['size'=>$size_data['size'], 'unit' => $size_data['unit']]);
             $product->sizes()->attach($size_instance->id);
 
-            if (isset($size_data['attributes'])){
-                foreach($size_data['attributes'] as $attribute){
+            if (isset($size_data['alternative_sizes'])){
+                foreach($size_data['alternative_sizes'] as $alternative){
                     $alt = AlternativeSize::firstOrCreate([
-                        'size'=>$attribute['value'], 
-                        'unit'=>$attribute['measurement_unit'], 
+                        'size'=>$alternative['size'], 
+                        'unit'=>$alternative['unit'], 
                     ]);
 
                     $alt->sizes()->attach($size_instance->id);
@@ -113,31 +113,31 @@ class ProductService {
         // Collect all unique measurement units from the sizes data
         $measurementUnits = [];
         foreach ($sizes_data as $size_data) {
-            if (isset($size_data['attributes'])) {
-                foreach ($size_data['attributes'] as $attribute) {
-                    $measurementUnits[$attribute['measurement_unit']] = true;
+            if (isset($size_data['alternative_sizes'])) {
+                foreach ($size_data['alternative_sizes'] as $size) {
+                    $measurementUnits[$size['size']] = true;
                 }
             }
         }
     
         // Ensure each size has all measurement units
         foreach ($sizes_data as &$size_data) {
-            if (!isset($size_data['attributes'])) {
-                $size_data['attributes'] = [];
+            if (!isset($size_data['alternative_sizes'])) {
+                $size_data['alternative_sizes'] = [];
             }
     
-            // Create a map for quick lookup of existing attributes
-            $existingAttributes = [];
-            foreach ($size_data['attributes'] as $attribute) {
-                $existingAttributes[$attribute['measurement_unit']] = $attribute['value'];
+            // Create a map for quick lookup of existing alternative_sizes
+            $existingAlternatives = [];
+            foreach ($size_data['alternative_sizes'] as $size) {
+                $existingAlternatives[$size['unit']] = $size['size'];
             }
     
-            // Add missing attributes with "N/A"
-            foreach ($measurementUnits as $unit => $value) {
-                if (!isset($existingAttributes[$unit])) {
-                    $size_data['attributes'][] = [
-                        'value' => 'N/A',
-                        'measurement_unit' => $unit
+            // Add missing alternative_sizes with "N/A"
+            foreach ($measurementUnits as $unit => $size) {
+                if (!isset($existingAlternatives[$unit])) {
+                    $size_data['alternative_sizes'][] = [
+                        'size' => 'N/A',
+                        'unit' => $unit
                     ];
                 }
             }
@@ -209,13 +209,13 @@ class ProductService {
         }
 
         // create sale instance 
-        if (isset($validated_data['sale']) && $validated_data['sale']){
+        if (isset($validated_data["sale"]) && $validated_data["sale"]){
             $sale = [
-                'product_id' => $product_instance->id,
-                'starts_at' => $validated_data['sale_start_date'],
-                'sale_percentage' => $validated_data['discount_percentage'],
-                'sale_end_date' => $validated_data["sale_end_date"] ?? null,
-                "sale_quantity" => $validated_data['sale_quantity'] ?? null,
+                "product_id" => $product_instance->id,
+                "starts_at" => $validated_data["sale_start_date"],
+                "ends_at" => $validated_data["sale_end_date"] ?? null,
+                "quantity" => $validated_data["sale_quantity"] ?? null,
+                "sale_percentage" => $validated_data["discount_percentage"],
             ];
             Sale::create($sale);
         }

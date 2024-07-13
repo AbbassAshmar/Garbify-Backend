@@ -19,7 +19,7 @@ class CategoryController extends Controller
         $data = $request->validated();
         ['category' => $category,'error' => $error] = $this->categoryService->createCategory($data);
 
-        if ($category == null){
+        if ($category == null && $error){
             $error = ['message'=>$error, 'code'=>400];
             $data = ['action' => "not created"];
             $response_body = GetResponseHelper::getFailedResponse($error,null, $data);

@@ -2,30 +2,28 @@
 
 namespace App\Http\Controllers;
 
-use App\Helpers\AuthenticationHelper;
 use App\Helpers\GetResponseHelper;
 use App\Helpers\ValidateResourceHelper;
 use App\Http\Resources\FavoritesListResource;
 use App\Models\Favorite;
 use App\Models\FavoritesList;
 use Illuminate\Http\Request;
-use App\Models\User;
+use App\Services\AccessToken\AccessTokenService;
 use App\Services\Like\LikeService;
-use Exception;
-use Illuminate\Database\QueryException;
-use Laravel\Sanctum\PersonalAccessToken;
 use Spatie\Permission\Exceptions\UnauthorizedException;
-
-use function PHPUnit\Framework\isEmpty;
 
 class FavoritesListController extends Controller
 {
     
-    // creation is done in FavoriteController createFavorite method
+    private $accessTokenService;
+
+    function __construct(AccessTokenService $accessTokenService){
+        $this->accessTokenService = $accessTokenService;
+    }
 
     // get all public FavoritesLists of all users
     public function listFavoritesList(Request $request){
-        $user_token =  AuthenticationHelper::getUserAndToken($request);
+        $user_token =  $this->accessTokenService->getUserAndToken($request);
         $current_user = $user_token["user"];
         $pageLimit= ['page'=>$request->input("page"),'limit'=>$request->input("limit")];
         $sort_by = $request->input("sort")?$request->input("sort"):"most popular";
@@ -63,7 +61,7 @@ class FavoritesListController extends Controller
 
     // get one FavoritesList by id (user retrieves other user's favorites list)
     public function retrieveById(Request $request ,$id){
-        $user_token =  AuthenticationHelper::getUserAndToken($request);
+        $user_token =  $this->accessTokenService->getUserAndToken($request);
         $current_user = $user_token["user"];
 
         $favorites_list = FavoritesList::with("favorites")->find($id);
@@ -86,7 +84,7 @@ class FavoritesListController extends Controller
         $favorites_list = FavoritesList::find($id);
         ValidateResourceHelper::ensureResourceExists($favorites_list,"Favorites list");
 
-        $user_token = AuthenticationHelper::getUserAndToken($request);
+        $user_token = $this->accessTokenService->getUserAndToken($request);
         $user = $user_token['user'];
         $body  = ["action"=>"viewed"];
 

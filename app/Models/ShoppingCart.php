@@ -11,7 +11,6 @@ class ShoppingCart extends Model
 
     protected $fillable=[
         'user_id', 
-        'anonymous_user_id',
         'created_at',
         'updated_at',
     ];

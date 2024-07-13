@@ -2,166 +2,90 @@
 
 namespace App\Http\Controllers;
 
-use App\Helpers\AuthenticationHelper;
+
 use App\Helpers\GetResponseHelper;
 use Illuminate\Http\Request;
-use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Exception;
-use App\Models\FavoritesList;
-use App\Models\ShoppingCart;
+use App\Services\User\UserService;
 use Illuminate\Validation\ValidationException;
-
-use function PHPUnit\Framework\isEmpty;
+use App\Http\Requests\CreateUserRequest;
+use App\Services\FavoritesList\FavoritesListService;
+use App\Services\User\ShoppingCartService;
 
 class UserController extends Controller
 {
-    //helper
-    public function createUser($request){
-        $valid =$request->validate([
-            'name' =>['bail','required', 'string', 'max:256'],
-            'email'=>['bail','unique:users,email', 'required', 'email'],
-            'password' =>['bail','required' ,'string' ,'regex:/\d/','regex:/.*[A-Z].*/','min:8','same:confirm_password'],
-            'confirm_password'=> ['bail','required','same:password'],
-        ],[
-            'password.min' => 'Password should be at least 8 characters.',
-            'password.same' => '',
-            'confirm_password.same' => "Passwords do not match.", 
-        ]);
-        
-        try {
-            $new_user = User::create([
-                'email' => $valid['email'] , 
-                'name'=>$valid['name'],
-                'password'=>$valid['password'],
-                'profile_picture'=>null
-            ]);
-        }catch(Exception $e){
-            return null;
-        }
+    private $userService;
+    private $favoritesListService;
+    private $shoppingCartService;
 
-        $this->createFavoritesList($new_user);
-        // $this->createShoppingCart($new_user);
-        return $new_user;
-    }
-    
-    //helper
-    public function createFavoritesList($user){
-        $favorites_list = FavoritesList::where("user_id", $user->id)->first();
-        if (!$favorites_list){
-            $favorites_list = FavoritesList::create([
-                'user_id' =>$user->id,
-                'name' =>$user->name ."'s Favorites",
-            ]);
-        }
-        return $favorites_list;
+    function __construct(UserService $userService, FavoritesListService $favoritesListService, ShoppingCartService $shoppingCartService){
+        $this->userService = $userService;
+        $this->favoritesListService = $favoritesListService;
+        $this->shoppingCartService = $shoppingCartService;
     }
 
-    public function createShoppingCart($user){
-        $shopping_cart = ShoppingCart::where("user_id", $user->id)->first();
-        if(!$shopping_cart){
-            $shopping_cart = ShoppingCart::create([
+    public function retrieveUser($request, $id){
+        $requester = $request->user();
+        $user = $this->userService->getByID($id);
 
-            ]);
-        }
-        return $shopping_cart;
-    }
-    
-
-    public function register(Request $request){
-        $new_user = $this->createUser($request);
-        if (!$new_user){
+        if (!$requester->can("retrieve_admin") && $user->hasRole('admin')){
             $error = [
-                'message'=>"An unexpected error occurred while processing your request. 
-                 Please try again later.",
-                'code'=>400
+                'message'=>"You do not have the required permission to retrieve an admin's information.",
+                'code'=>403
             ];
-            $response_body = GetResponseHelper::getFailedResponse($error,null);
-            return response($response_body,400);
-        }
-        $new_user->assignRole('client');
-
-        $refresh_token = AuthenticationHelper::createRefreshToken($new_user);
-        $access_token = AuthenticationHelper::createAccessToken($new_user);
-    
-        $data=[
-            'user'=>$new_user,
-            'token'=>$access_token->plainTextToken,
-        ];
-        $response_body = GetResponseHelper::getSuccessResponse($data,null);
-        $cookie = cookie('refresh_token',$refresh_token->plainTextToken,2880);
-
-        return response($response_body,201)->withCookie($cookie);
-    }
-    
-    public function login(Request $request){
-        $valid = $request->validate([
-            'email' => ['bail','required', 'email','exists:users,email'],
-            'password'=> ['bail','required' , 'string' ,'regex:/\d/','min:8'],
-        ]);
-
-        $email =$valid['email'];
-        $password = $valid["password"];
-        $user = User::where('email', $email)->first();
-    
-        if (!Hash::check($password,$user->password)){
-            throw ValidationException::withMessages([
-                'password' => 'Email and password do not match.',
-                'email'=>'' // added in error_fields but not in messages details
-            ]);
+            $response = GetResponseHelper::getFailedResponse($error,null);
+            return response($response,403);
         }
 
-        // delete all refresh and access tokens 
-        $user->tokens()->delete();
-
-        // create an access token and a refresh token
-        $access_token =AuthenticationHelper::createAccessToken($user)->plainTextToken;
-        $refresh_token =AuthenticationHelper::createRefreshToken($user)->plainTextToken;
-
-        $data=[
-            'user'=>$user,
-            'token'=>$access_token,
-        ];
-        $response_body = GetResponseHelper::getSuccessResponse($data,null);
-        $cookie = cookie('refresh_token',$refresh_token->plainTextToken,2880);
-
-        return response($response_body,201)->withCookie($cookie);
-    }
-
-    public function logout(Request $request){
-        $user = $request->user();
-        try{
-            //delete all user's tokens 
-            $user->tokens()->delete();
-            $data = ['action'=>'deleted'];
-            return response(GetResponseHelper::getSuccessResponse($data,null),200);
-        }catch(Exception $e){
+        if (!$requester->can("retrieve_super_admin") && $user->hasRole('super admin')){
             $error = [
-                'message'=>"An unexpected error occurred while processing your request. 
-                 Please try again later.",
-                'code'=>500
+                'message'=>"You do not have the required permission to retrieve a super admin's information.",
+                'code'=>403
             ];
-            return response(GetResponseHelper::getFailedResponse($error,null),500);
+            $response = GetResponseHelper::getFailedResponse($error,null);
+            return response($response,403);
         }
+
+        $response = GetResponseHelper::getSuccessResponse(['user'=>$user],null);
+        return response($response, 200);
     }
 
-    public function adminRegister(Request $request){
-        $new_user = $this->createUser($request);
-        if (!$new_user){
-            $error = [
-                'message'=>"An unexpected error occurred while processing your request. 
-                 Please try again later.",
-                'code'=>400
-            ];
-            $response_body = GetResponseHelper::getFailedResponse($error,null);
-            return response($response_body,400);
+    public function createAdmin(CreateUserRequest $request){
+        $data = $request->validated();
+        ['user'=>$user, 'error' => $error] = $this->userService->createUser($data,"admin");
+
+        if ($user == null && $error){
+            $error = ['message'=>$error, 'code'=>400];
+            $data = ['action' => "not created"];
+            $responseBody = GetResponseHelper::getFailedResponse($error,null, $data);
+            return response($responseBody,400);
         }
-        
-        $new_user->assignRole('admin');
-        $body = ['user'=>$new_user];
-        $response_body = GetResponseHelper::getSuccessResponse($body,null);
-        
-        return response($response_body, 201);
+
+        $this->favoritesListService->createFavoritesListForUser($user);
+        $this->shoppingCartService->createShoppingCartForUser($user);
+
+        $body = ['action' => 'created'];
+        $responseBody = GetResponseHelper::getSuccessResponse($body,null);
+        return response($responseBody,201);
+    }
+
+    public function createClient(CreateUserRequest $request){
+        $data = $request->validated();
+        ['user'=>$user, 'error' => $error] = $this->userService->createUser($data,"client");
+
+        if ($user == null && $error){
+            $error = ['message'=>$error, 'code'=>400];
+            $data = ['action' => "not created"];
+            $responseBody = GetResponseHelper::getFailedResponse($error,null, $data);
+            return response($responseBody,400);
+        }
+
+        $this->favoritesListService->createFavoritesListForUser($user);
+        $this->shoppingCartService->createShoppingCartForUser($user);
+
+        $body = ['action' => 'created'];
+        $responseBody = GetResponseHelper::getSuccessResponse($body,null);
+        return response($responseBody,201);
     }
 
     public function updateUser(Request $request){

@@ -25,18 +25,32 @@ class UserRolePermissionSeeder extends Seeder
         // Create permissions
         $createProductPermission = Permission::create(['name' => 'create_product']);
         $updateProductPermission = Permission::create(['name' => 'update_product']);
+
         $updateFavoritesListPermission= Permission::create(['name' => 'update_favorites_list']);
-        $registerAdminPermission = Permission::create(['name' => 'register_admin']);
         $deleteAnyReviewPermission= Permission::create(['name'=>'delete_any_review']);
+
+        $registerAdminPermission = Permission::create(['name' => 'register_admin']);
+        $retrieveAdminPermission = Permission::create(['name' => 'retrieve_admin']);
+        $editAdminPermission = Permission::create(['name' => 'edit_admin']);
+        $deleteAdminPermission = Permission::create(['name' => 'delete_admin']);
+
+        $retrieveSuperAdminPermission = Permission::create(['name' => 'retrieve_super_admin']);
+        $editSuperAdminPermission = Permission::create(['name' => 'edit_super_admin']);
 
         // Sync permissions to roles
         $superAdminRole->syncPermissions([
             $createProductPermission, 
             $updateProductPermission, 
             $registerAdminPermission,
+            $deleteAdminPermission,
+            $editAdminPermission,
+            $retrieveAdminPermission,
             $updateFavoritesListPermission,
-            $deleteAnyReviewPermission
+            $deleteAnyReviewPermission,
+            $editSuperAdminPermission,
+            $retrieveSuperAdminPermission,
         ]);
+
         $adminRole->syncPermissions([
             $createProductPermission, 
             $updateProductPermission,

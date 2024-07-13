@@ -45,19 +45,19 @@ class CreateProductRequest extends FormRequest
                 },
                 'date','nullable','after:today'],
 
-            'sale_start_date' => ['bail','required_if:sale,true','date','after_or_equal:today'],
-            'discount_percentage' => ['bail','required_if:sale,true', 'min:0.01','max:100','regex:/^\d{1,2}(\.\d{1,2})?$/',],
+            'sale_start_date' => ['bail','required_if:sale,1','nullable','date','after_or_equal:today'],
+            'discount_percentage' => ['bail','required_if:sale,true','nullable', 'min:0.01','max:100','regex:/^\d{1,2}(\.\d{1,2})?$/',],
 
-            'colors' => ['bail','array', 'required', 'min:1'],
-            'colors.*' => ['bail','required', 'string','regex:/^#[a-fA-F0-9]{6}$/'],
+            'colors' => ['bail','array', 'required', 'min:1',],
+            'colors.*' => ['bail','required', 'string','distinct','regex:/^#[a-fA-F0-9]{6}$/'],
 
             'sizes' => ['bail', 'min:1', 'required', 'array'],
             'sizes.*' =>  ['bail', 'required', 'string', 'max:256'],
-            'sizes_measurement_unit' =>  ['bail', 'required', 'string', 'max:256'],
+            'sizes_unit' =>  ['bail', 'required', 'string', 'max:256'],
 
             'sizes_data' => ['bail', 'required', 'array', 'min:1'],
-            'sizes_data.*.value' => ['bail', 'required', 'string', 'max:256'],
-            'sizes_data.*.measurement_unit' => ['bail', 'required', 'string','max:256'],
+            'sizes_data.*.size' => ['bail', 'required', 'string', 'max:256'],
+            'sizes_data.*.unit' => ['bail', 'required', 'string','max:256'],
 
             'thumbnail_data.color' => ['bail','required','string','regex:/^#[a-fA-F0-9]{6}$/'],
             'thumbnail_data.image' => ['bail','required','image','max:5000','mimes:jpg,png,jpeg'],
@@ -91,7 +91,8 @@ class CreateProductRequest extends FormRequest
 
             'colors.required' => "Select at least 1 color for your product.",
             'colors.*.regex' => "Colors should be in hex format ex. #000000",
-
+            'colors.*.distinct' => 'Colors should be unique',
+            
             'category_id.required' => "Category field is required.",
             'category_id.exists' => "Category does not exist.",
 

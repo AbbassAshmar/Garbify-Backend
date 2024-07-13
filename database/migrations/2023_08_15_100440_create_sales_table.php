@@ -17,7 +17,7 @@ return new class extends Migration
             $table->integer("quantity",false,true)->nullable();
             $table->decimal("sale_percentage",5,2,true)->default(0.0);
             $table->foreignId("product_id")->nullable()->onDelete("set null")->constrained();
-            $table->datetime("ends_at");
+            $table->datetime("ends_at")->nullable();
             $table->datetime("starts_at");
 
         });

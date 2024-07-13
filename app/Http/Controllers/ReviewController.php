@@ -3,17 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\TransactionFailedException;
-use App\Helpers\AuthenticationHelper;
 use App\Helpers\GetResponseHelper;
 use App\Helpers\ValidateResourceHelper;
 use App\Http\Resources\ReviewResource;
 use App\Models\Product;
 use Illuminate\Http\Request;
-use App\Http\Controllers\ProductController;
 use App\Models\Review;
 use App\Models\Size;
 use App\Models\Color;
 use App\Models\ReviewsImage;
+use App\Services\AccessToken\AccessTokenService;
 use App\Services\Like\LikeService;
 use Exception;
 use Illuminate\Support\Facades\DB;
@@ -22,9 +21,15 @@ use Symfony\Component\Routing\Exception\ResourceNotFoundException;
 
 class ReviewController extends Controller
 {
+    private $accessTokenService;
+
+    function __construct(AccessTokenService $accessTokenService){
+        $this->accessTokenService = $accessTokenService;
+    }
+    
     // returns all reviews of a product 
     function listReviewsByProduct(Request $request , $product_id){
-        $user_token =  AuthenticationHelper::getUserAndToken($request);
+        $user_token =  $this->accessTokenService->getUserAndToken($request);
         $current_user = $user_token["user"];
 
         $pageLimit = ['page'=>$request->input("page"), 'limit'=> $request->input('limit')];
