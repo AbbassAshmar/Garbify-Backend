@@ -13,7 +13,7 @@ class Product extends Model
     protected $appends =[
         'thumbnail',
         'current_sale',
-        'reviews_summary'
+        'reviews_summary',
     ];
 
     protected $fillable = [
@@ -76,10 +76,7 @@ class Product extends Model
         return $this->hasMany(ShoppingCartItem::class);
     }
     
-
-
     // Accessors
-
     public function getThumbnailAttribute(){
         $thumbnail = $this->images()->with('color')->where("is_thumbnail",true)->first();
         return $thumbnail;
@@ -89,45 +86,12 @@ class Product extends Model
         return $this->images()->where("is_thumbnail",false)->get();
     }
 
-    // returns all units of alternative sizes + unit of main size of a product (list)
-    public function getSizesUnitsAttribute(){
-        $First_size =  $this->sizes[0];
-        $units =$First_size->alternative_units;
-        array_unshift($units, $First_size->unit);
-        return $units;
-    }
-    
-    // returns a list of lists of sizes and their alternatives (list of lists)
-    public function getSizesListsAttribute(){
-        $alt_sizes_array = [];
-        $sizes = $this->sizes;
-        foreach($sizes as $size){
-            $alt_sizes = [$size->size];
-            $alt_sizes_of_size = $size->alternativeSizes()->select('size')->orderBy("id")->get()->all();
-            foreach($alt_sizes_of_size as $alt_size){
-                array_push($alt_sizes, $alt_size->size);
-            }
-            array_push($alt_sizes_array,$alt_sizes);
-        }
-        return $alt_sizes_array;
-    }
-
-    public function getSizesArrayAttribute(){
-        $c=[] ;
-        foreach($this->sizes()->get() as $s){
-            array_push($c ,$s->size);
-        }
-
-        return $c;
-    }
-
-    public function sizesAndAlternatives(){
-        return $this->sizes()->with('alternativeSizes')->get();
-    }
-
     public function getCurrentSaleAttribute(){
         $now = (new DateTime())->format('Y-m-d H:i:s');
-        $sale = $this->sales()->where([['starts_at' , '<=' ,$now ],['ends_at','>',$now]])->orderBy('starts_at','DESC')->first();
+        $sale = $this->sales()->where([['starts_at' , '<=' ,$now],['ends_at','>',$now],['quantity',null],['status','active']])
+        ->orWhere([['starts_at' , '<=' ,$now ],['ends_at','>',$now],['quantity','>','0'],['status','active']])
+        ->orWhere([['starts_at', "<=", $now], ['quantity','>',0],['ends_at',null], ['status','active']])
+        ->orderBy('starts_at','DESC')->first();
         return $sale;
     }
 
@@ -140,14 +104,6 @@ class Product extends Model
         return $this->price;
     }
 
-    public function getColorsArrayAttribute(){
-        $c=[] ;
-        foreach($this->colors()->get() as $col){
-            array_push($c ,$col->color);
-        }
-        return $c;
-    }
-   
     public function averageRatings(){
         return $this->reviews->avg("product_rating");
     }

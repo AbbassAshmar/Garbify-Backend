@@ -15,16 +15,22 @@ class ProductResource extends JsonResource
      */
     
     // returns an object where colors are keys and lists of images are values accordingly
-    public function colorsImagesObject(array $colors){
+    public function colorsImagesObject(){
         $obj = []; 
+        $colors = $this->colors;
+
         foreach ($colors as $color){
-            $obj[$color] =$this->images()->whereHas("color", function($query)use(&$color){
-                $query->where("color",$color);
+            $obj[$color->color] =$this->images()->whereHas("color", function($query)use(&$color){
+                $query->where("color",$color->color);
             })->get();
         }
+
         return $obj;
     }
 
+    public function sizesAndAlternatives(){
+        return $this->sizes()->with('alternativeSizes')->get();
+    }
 
     public function toArray(Request $request): array
     {
@@ -43,7 +49,7 @@ class ProductResource extends JsonResource
             'category' => $this->category,
             'reviews_summary'=> $this->reviews_summary,
             "sale" => $this->current_sale,
-            'images' => $this->colorsImagesObject($this->colors_array),
+            'images' => $this->colorsImagesObject(),
             "thumbnail" => $this->thumbnail,
         ];
     }

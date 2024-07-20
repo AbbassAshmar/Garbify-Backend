@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use App\Services\Product\ProductService;
 
 use App\Http\Requests\CreateProductRequest;
+use App\Http\Requests\UpdateProductRequest;
+
 // get() returns a collection with conditions (where() orderBy()..) : returns QuerySet
 // first() returns the first instance                               : returns Object
 // find() finds based on id , find(1) similar to first()            : returns Object
@@ -96,6 +98,31 @@ class ProductController extends Controller{
         return response($response, 200);
     }
 
+    public function updateProduct(UpdateProductRequest $request, $id) {
+        $data = $request->validated();
+        $product =  $this->productService->getByID($id);
+
+        ["product"=> $product, "error"=>$error] = $this->productService->updateProduct($product,$data);
+
+        if ($product == null && $error){
+            $error = ['message'=>$error, 'code'=>400];
+            $data = ['action' => "not updated"];
+            $responseBody = GetResponseHelper::getFailedResponse($error,null, $data);
+            return response($responseBody,400);
+        }
+
+        $body = ['action' => 'updated', "product" => "updated_fields"];
+        $responseBody = GetResponseHelper::getSuccessResponse($body,null);
+        return response($responseBody,200);
+    }
+
+    public function deleteProduct(Request $request, $id){
+        $product =  $this->productService->getByID($id);
+        $this->productService->deleteProduct($product);
+        $response = GetResponseHelper::getSuccessResponse(['action'=>"deleted"],null);
+        return response($response, 200);
+    }
+    
     public function productSize(Request $request , $id){
         $product = $this->productService->getByID($id);
         $response = GetResponseHelper::getSuccessResponse(['sizes'=>$product->sizes_array],null);

@@ -32,7 +32,7 @@ class ProductService {
     }
 
     public function getAll($filters){
-        $products =  Product::with(['category',]);
+        $products =  Product::with(['category','sizes','colors']);
 
         $searchFilter = new SearchFilter($filters['search']);
         $colorFilter = new ColorFilter($filters['color'], $searchFilter);
@@ -46,13 +46,13 @@ class ProductService {
     }
 
     public function getByID($id){
-        $product = Product::find($id);
+        $product = Product::with(['sizes','sizes.alternativeSizes','colors','tags','category'])->find($id);
         ValidateResourceHelper::ensureResourceExists($product, 'Product');
         return $product;
     }
 
     public function getPopularProducts(){
-        $products = Product::select("products.*")
+        $products = Product::with(['category','sizes','colors'])->select("products.*")
         ->leftJoin("order_details", 'products.id', '=','order_details.product_id')
         ->join('orders','order_details.order_id','=','orders.id')
         ->groupBy('products.id')->orderByRaw("sum(order_details.ordered_quantity) DESC");
@@ -109,13 +109,13 @@ class ProductService {
         }
     }
 
-    function validateSizesAlternatives($sizes_data){
+    function validateAlternativeSizes(&$sizes_data){
         // Collect all unique measurement units from the sizes data
         $measurementUnits = [];
         foreach ($sizes_data as $size_data) {
             if (isset($size_data['alternative_sizes'])) {
                 foreach ($size_data['alternative_sizes'] as $size) {
-                    $measurementUnits[$size['size']] = true;
+                    $measurementUnits[$size['unit']] = true;
                 }
             }
         }
@@ -142,6 +142,8 @@ class ProductService {
                 }
             }
         }
+
+        return $sizes_data;
     }
 
     function addImagesToProducts($imagesColorsList, $product){
@@ -204,7 +206,7 @@ class ProductService {
 
         // get or create sizes and alternative sizes for each size 
         if (isset($validated_data['sizes_data'])) {
-            $this->validateSizesAlternatives($validated_data['sizes_data']);
+            $this->validateAlternativeSizes($validated_data['sizes_data']);
             $this->addSizesToProduct($validated_data['sizes_data'], $product_instance);
         }
 
@@ -216,6 +218,7 @@ class ProductService {
                 "ends_at" => $validated_data["sale_end_date"] ?? null,
                 "quantity" => $validated_data["sale_quantity"] ?? null,
                 "sale_percentage" => $validated_data["discount_percentage"],
+                "status" => "active",
             ];
             Sale::create($sale);
         }
@@ -223,5 +226,20 @@ class ProductService {
         return $product_instance;
     }
 
+    public function deleteProduct($product){
+        return $product->delete();
+    }
+
+    public function updateProduct($product, $data){
+        // name,
+        // description
+        // quantity
+        // status
+
+        // original_price
+        // selling_price
+
+        // 
+    }
 }
 

@@ -7,7 +7,7 @@ use Illuminate\Auth\Events\Failed;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Validator;
 
-class CreateProductRequest extends FormRequest
+class UpdateProductRequest extends FormRequest
 {
     /**
      * Get the validation rules that apply to the request.
@@ -35,6 +35,8 @@ class CreateProductRequest extends FormRequest
 
             'sale' => ['bail', 'sometimes' ,'boolean'],
             'sale_quantity' => ["bail",'integer', 'nullable', 'min:0'],
+            'discount_percentage' => ['bail','required_if:sale,true','nullable', 'min:0.01','max:100','regex:/^\d{1,2}(\.\d{1,2})?$/',],
+
             'sale_end_date' => [
                 'bail',
                 function ($attribute, $value, $fail){
@@ -67,8 +69,6 @@ class CreateProductRequest extends FormRequest
                     }
                 }
             ],
-
-            'discount_percentage' => ['bail','required_if:sale,true','nullable', 'min:0.01','max:100','regex:/^\d{1,2}(\.\d{1,2})?$/',],
 
             'colors' => ['bail','array', 'required', 'min:1','max:10'],
             'colors.*' => ['bail','required', 'string','distinct','regex:/^#[a-fA-F0-9]{6}$/'],

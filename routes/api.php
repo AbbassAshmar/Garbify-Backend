@@ -50,7 +50,7 @@ Route::get("/users/{id}", [UserController::class,'retrieveUsers'])->middleware([
 // Route::patch("/users/{id}", [UserController::class,'updateUser'])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
 
 Route::patch("/users/user", [UserController::class,'updateUser'])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
-Route::post("/users/admin", [UserController::class,'createAdmin'])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
+Route::post("/users/admins", [UserController::class,'createAdmin'])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
 Route::post("/users/clients", [UserController::class,'createClient'])->middleware(['auth:sanctum','ability:'. TokenAbility::ACCESS_API->value]);
 
 
@@ -61,6 +61,7 @@ Route::get("/products/{id}", [ProductController::class, "retrieveProduct"]);
 Route::get("/products/{id}/colors", [ProductController::class, "productColor"]);
 Route::get("/products/{id}/sizes", [ProductController::class, "productSize"]);
 Route::post("/products", [ProductController::class , "createProduct"]);
+Route::delete("/products/{id}", [ProductController::class, "deleteProduct"]);
 
 // Filter Controller Routes
 
