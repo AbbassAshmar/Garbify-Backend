@@ -19,33 +19,25 @@ class UpdateProductRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' =>['bail','unique:products,name', 'required','string','min:1', 'max:500'],
-            'description' => ['bail', 'required','string','min:1', 'max:1000'],
-            'type' => ['bail', 'required','string','min:1', 'max:256'],
+            'name' =>['bail','unique:products,name', 'sometimes','string','min:1', 'max:500'],
+            'description' => ['bail', 'sometimes','string','min:1', 'max:1000'],
+            'type' => ['bail', 'sometimes','string','min:1', 'max:256'],
             
-            'category_id' => ['bail','integer', 'required', 'exists:categories,id'],
-            'quantity' =>  ['bail','required', 'integer', 'min:0'],
-            'status' => ['bail', 'required','string','min:1', 'max:256'],
+            'category_id' => ['bail','integer', 'sometimes', 'exists:categories,id'],
+            'quantity' =>  ['bail','sometimes', 'integer', 'min:0'],
+            'status' => ['bail', 'sometimes','string','min:1', 'max:256'],
 
-            'tags' => ['bail', 'min:3', 'array', 'required'],
-            'tags.*' => ['bail','required', 'string', 'min:2', 'max:256'],
+            'tags' => ['bail', 'min:3', 'array', 'sometimes'],
+            'tags.*' => ['bail','sometimes', 'string', 'min:2', 'max:256'],
 
-            'original_price' => ['bail', 'required', 'numeric', 'min:0','max:999999.99'],
-            'selling_price' => ['bail', 'required', 'numeric', 'min:0','max:999999.99'],
+            'original_price' => ['bail', 'sometimes', 'numeric', 'min:0','max:999999.99'],
+            'selling_price' => ['bail', 'sometimes', 'numeric', 'min:0','max:999999.99'],
 
-            'sale' => ['bail', 'sometimes' ,'boolean'],
-            'sale_quantity' => ["bail",'integer', 'nullable', 'min:0'],
-            'discount_percentage' => ['bail','required_if:sale,true','nullable', 'min:0.01','max:100','regex:/^\d{1,2}(\.\d{1,2})?$/',],
+            'sale_quantity' => ["bail",'sometimes', 'integer', 'nullable', 'min:1'],
+            'discount_percentage' => ['bail',"sometimes",'nullable', 'min:0.01','max:100','regex:/^\d{1,2}(\.\d{1,2})?$/',],
 
             'sale_end_date' => [
                 'bail',
-                function ($attribute, $value, $fail){
-                    if ($this->request->get("sale") == "1"){
-                        if (!$this->request->get("sale_quantity","") 
-                        && !$this->request->get("sale_end_date", ""))
-                        return $fail("required if sale quantity is empty");
-                    }
-                },
                 'date',
                 'nullable',
                 'after:today',
@@ -54,9 +46,8 @@ class UpdateProductRequest extends FormRequest
 
             'sale_start_date' => [
                 'bail',
-                'required_if:sale,1',
+                'sometimes',
                 'nullable','date',
-                'after_or_equal:today',
                 'date_format:Y-m-d H:i',
                 function ($attribute, $value, $fail) {
                     $saleEndDate = $this->request->get('sale_end_date');
@@ -70,23 +61,23 @@ class UpdateProductRequest extends FormRequest
                 }
             ],
 
-            'colors' => ['bail','array', 'required', 'min:1','max:10'],
-            'colors.*' => ['bail','required', 'string','distinct','regex:/^#[a-fA-F0-9]{6}$/'],
+            'colors' => ['bail','array', 'sometimes', 'min:1','max:10'],
+            'colors.*' => ['bail','sometimes', 'string','distinct','regex:/^#[a-fA-F0-9]{6}$/'],
 
-            'sizes' => ['bail', 'required','array', 'min:1', 'max:10'],
-            'sizes.*' =>  ['bail', 'required', 'string', 'max:256'],
-            'sizes_unit' =>  ['bail', 'required', 'string', 'max:256'],
+            'sizes' => ['bail', 'sometimes','array', 'min:1', 'max:10'],
+            'sizes.*' =>  ['bail', 'sometimes', 'string', 'max:256'],
+            'sizes_unit' =>  ['bail', 'sometimes', 'string', 'max:256'],
 
-            'sizes_data' => ['bail', 'required', 'array', 'min:1', 'max:10'],
-            'sizes_data.*.size' => ['bail', 'required', 'string', 'max:256'],
-            'sizes_data.*.unit' => ['bail', 'required', 'string','max:256'],
+            'sizes_data' => ['bail', 'sometimes', 'array', 'min:1', 'max:10'],
+            'sizes_data.*.size' => ['bail', 'sometimes', 'string', 'max:256'],
+            'sizes_data.*.unit' => ['bail', 'sometimes', 'string','max:256'],
 
             'sizes_data.*.alternative_sizes' => ['bail','sometimes','array','max:10'],
             'sizes_data.*.alternative_sizes.*.size' => ['bail','sometimes','string','max:256'],
             'sizes_data.*.alternative_sizes.*.unit' => ['bail','sometimes','string','max:256'],
 
-            'thumbnail_data.color' => ['bail','required','string','regex:/^#[a-fA-F0-9]{6}$/'],
-            'thumbnail_data.image' => ['bail','required','image','max:5000','mimes:jpg,png,jpeg'],
+            'thumbnail_data.color' => ['bail','sometimes','string','regex:/^#[a-fA-F0-9]{6}$/'],
+            'thumbnail_data.image' => ['bail','sometimes','image','max:5000','mimes:jpg,png,jpeg'],
             
             'images_data' => ['bail','sometimes'],
             'images_data.*.images' => ['bail','sometimes','array'],

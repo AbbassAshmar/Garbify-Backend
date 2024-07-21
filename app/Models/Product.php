@@ -14,6 +14,7 @@ class Product extends Model
         'thumbnail',
         'current_sale',
         'reviews_summary',
+        'status',
     ];
 
     protected $fillable = [
@@ -31,6 +32,10 @@ class Product extends Model
     protected $hidden = [
         "category_id",
     ];
+
+    public function productStatus(){
+        return $this->belongsTo(ProductStatus::class);
+    }
 
     public function category(){
         return $this->belongsTo(Category::class);
@@ -77,6 +82,10 @@ class Product extends Model
     }
     
     // Accessors
+    public function getStatusAttribute(){
+        return $this->productStatus->name;
+    }
+
     public function getThumbnailAttribute(){
         $thumbnail = $this->images()->with('color')->where("is_thumbnail",true)->first();
         return $thumbnail;

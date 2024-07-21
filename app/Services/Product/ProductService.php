@@ -231,6 +231,18 @@ class ProductService {
     }
 
     public function updateProduct($product, $data){
+        $directUpdateFields = [
+            "name", "description", "quantity", "status", 
+            "original_price", "selling_price","type"
+        ];
+
+        foreach($directUpdateFields as $field){
+            if (isset($data[$field])){
+                $product[$field] = $data[$field];
+            }
+        }
+
+        
         // name,
         // description
         // quantity

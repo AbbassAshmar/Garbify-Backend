@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreignId("product_id")->nullable()->onDelete("set null")->constrained();
             $table->datetime("ends_at")->nullable();
             $table->datetime("starts_at");
-            $table->string("status", 256)->default("inactive");
+            $table->foreignId("status_id")->constrained("sales_statuses")->onDelete("cascade");
         });
         // status : active : only one sale per product can be active
         // inactive : default.

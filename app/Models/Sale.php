@@ -9,13 +9,25 @@ use Illuminate\Database\Eloquent\Model;
 class Sale extends Model
 {
     use HasFactory;
-    protected $fillable = ['product_id' , 'starts_at','status', 'ends_at' , 'sale_percentage','quantity'];
+    
+    protected $appends = ['status'];
     protected $hidden = ["created_at", "updated_at","id",'product_id'];
+    protected $fillable = ['product_id' , 'starts_at','status', 'ends_at' , 'sale_percentage','quantity'];
 
-    function product(){
+    public function saleStatus(){
+        return $this->belongsTo(SaleStatus::class);
+    }
+
+    public function product(){
         return $this->belongsTo(Product::class);
     }
     
+
+    // accessors
+    public function getStatusAttribute(){
+        return $this->saleStatus->name;
+    }
+
     public function getStartsAt8601Attribute(){
         $date = DateTime::createFromFormat('yyyy-mm-dd hh:mi:ss',$this->starts_at);
         return $this->starts_at->format('c');

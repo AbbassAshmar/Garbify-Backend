@@ -18,6 +18,7 @@ class CreateAnonymousUserSeeder extends Seeder
             'email'=>'anonymousUserEmail4320@gmail.com',
             'password'=>env('ANONYMOUS_USER_PASS')
         ]);
+        
         $anonymousUser->assignRole('anonymous');    
     }
 }

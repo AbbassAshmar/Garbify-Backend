@@ -10,6 +10,10 @@ class Order extends Model
 {
     use HasFactory;
 
+    protected $appends = [
+        "status",
+    ];
+    
     protected $fillable=[
         'created_at',
         'status',
@@ -40,7 +44,15 @@ class Order extends Model
         return $this->hasMany(OrderDetail::class);
     }
 
+    public function orderStatus(){
+        return $this->belongsTo(OrderStatus::class);
+    }
+
     //ACCESSORS 
+    public function getStatusAttribute(){
+        return $this->orderStatus->name;
+        
+    }
 
     // created at : 0-2 days -> shipping in ... days
     //              2-max-shipping-days -> Delivering in ... days

@@ -14,11 +14,12 @@ return new class extends Migration
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
             $table->timestamps();
-            $table->text("status");
+            
             $table->dateTime("canceled_at")->nullable();
             $table->foreignId("shipping_address_id")->nullable()->constrained()->onDelete("set Null");
             $table->foreignId("user_id")->nullable()->constrained()->onDelete("set Null");
             $table->foreignId("shipping_method_id")->nullable()->constrained()->onDelete("set Null");
+            $table->foreignId("status_id")->constrained("orders_statuses")->onDelete("cascade");
 
             $table->integer("amount_total")->default(0);
             $table->integer("amount_tax")->default(0);
