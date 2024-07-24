@@ -19,30 +19,58 @@ class CategoryService {
     public function createCategory($validatedData){
         $data = [
             'image_url' => null,
-            "category" => $validatedData['name'],
-            'parent_id' => $validatedData['parent_id'],
+            'name' => $validatedData['name'],
             'description' => $validatedData['description'],
             'display_name' => $validatedData['display_name'],
+            'parent_id' => $validatedData['parent_id'] == -1 ? null :  $validatedData['parent_id'],
         ];
 
-        if (isset($validatedData["image"])){
-            $image = $validatedData['image'];
-            $path = Storage::putFile('public/categoriesImages', $image);
-            $imageUrl = Storage::url($path); // stored at storage/public/ca.. , accessed by public/storage/ca..
-            $data['image_url'] = $imageUrl;
-        }
-
-        if ($data["parent_id"] == -1){
-            $data["parent_id"] = null;
-        }
-
-        try{
+        try {
             $category = Category::create($data);
-            return ["category" => $category, "error" => null];
         }catch(Exception $exc){
             return ["category" => null, "error" => $exc];
         }
+
+        if (isset($validatedData["image"])){
+            $image = $validatedData['image'];
+            $name ="category_" . $category->id ."_image.".$image->extension();
+            
+            $path = Storage::putFileAs('public/categoryImages', $image, $name);
+            $imageUrl = Storage::url($path);
+
+            $category->image_url = $imageUrl;
+            $category->save();
+        }
+        
+        return ["category" => $category, "error" => null];
     }
+
+    public function updateCategory($category, $data){
+        $data['parent_id'] = $data['parent_id'] == -1 ? null : $data['parent_id'];
+        $directUpdateFields = [
+            "name", "description", "display_name","parent_id",  
+        ];
+
+        foreach($directUpdateFields as $field){
+            if (isset($data[$field])){
+                $category[$field] = $data[$field];
+            }
+        }
+
+        if (isset($data["image"])){
+            $image = $data['image'];
+            $name ="category_" . $category->id ."_image.".$image->extension();
+            
+            $path = Storage::putFileAs('public/categoryImages', $image, $name);
+            $imageUrl = Storage::url($path);
+
+            $category->image_url = $imageUrl;
+        }
+
+        $category->save();
+        return ["category" => $category, "error" => null];
+    }
+
 
     public function listCategoriesNested(){
         $categories = Category::tree()->get()->toTree();

@@ -26,7 +26,7 @@ class Product extends Model
         'description', 
         'type', 
         'quantity',
-        'status',
+        'status_id',
     ];
 
     protected $hidden = [

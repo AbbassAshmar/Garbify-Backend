@@ -12,7 +12,7 @@ class Category extends Model
     use HasFactory;
     use HasRecursiveRelationships;
 
-    protected $fillable = ['category', 'description', 'parent_id', 'display_name', 'image_url'];
+    protected $fillable = ['name', 'description', 'parent_id', 'display_name', 'image_url'];
     protected $appends = ["image_url", "total_products", "total_sales"];
     protected $hidden = ['created_at', 'updated_at'];
 

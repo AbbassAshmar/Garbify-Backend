@@ -28,18 +28,13 @@ class ShoppingCartService {
 
         return $shopping_cart;
     }
-
-
 }
 
 // user unauthenticated
-// user adds item to his cart
+// user adds item to his cart or orders item or views a list
 // create user instance (dummy)
-// user instance id stored in http only cookies
-// user logs in , move all info (list views, cart items, orders) to new user
+// user instance id stored in http only cookie of the user
 // user checkout : ask user to continue as a guest or login
 // continue as a guest : order is linked to the dummy instance
-// user views a list : if not logged in , create dummy instance.
-// dummy user is created with the first interaction with a feature that requires login
-// ex. view a list , add product to cart, order ..
-// user logs in , check his cookies for an id.
+// user logs in , check his cookies for an id, if present
+// move all info (list views, cart items, orders) to new user

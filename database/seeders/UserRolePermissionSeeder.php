@@ -21,8 +21,13 @@ class UserRolePermissionSeeder extends Seeder
         $clientRole = Role::create(['name'=>'client']);
         $adminRole = Role::create(['name' => 'admin']);
         $superAdminRole = Role::create(['name' => 'super admin']);
+        $dummyRole = Role::create(["name" => "dummy"]);
 
         // Create permissions
+        $viewFavoritesListPermission = Permission::create(['name' => 'view_favorites_list']);
+        $manageOwnShoppingCartPermission = Permission::create(['name' => 'manage_shopping_cart']);
+        $manageOwnOrderPermission = Permission::create(['name' => 'manage_order']);
+
         $createProductPermission = Permission::create(['name' => 'create_product']);
         $updateProductPermission = Permission::create(['name' => 'update_product']);
 
@@ -41,21 +46,43 @@ class UserRolePermissionSeeder extends Seeder
         $superAdminRole->syncPermissions([
             $createProductPermission, 
             $updateProductPermission, 
+            $updateFavoritesListPermission,
+            $deleteAnyReviewPermission,
+
             $registerAdminPermission,
             $deleteAdminPermission,
             $editAdminPermission,
             $retrieveAdminPermission,
-            $updateFavoritesListPermission,
-            $deleteAnyReviewPermission,
+
             $editSuperAdminPermission,
             $retrieveSuperAdminPermission,
+
+            $viewFavoritesListPermission,
+            $manageOwnShoppingCartPermission,
+            $manageOwnOrderPermission,
         ]);
 
         $adminRole->syncPermissions([
             $createProductPermission, 
             $updateProductPermission,
             $updateFavoritesListPermission,
-            $deleteAnyReviewPermission
+            $deleteAnyReviewPermission,
+
+            $viewFavoritesListPermission,
+            $manageOwnShoppingCartPermission,
+            $manageOwnOrderPermission,
+        ]);
+
+        $clientRole->syncPermissions([
+            $viewFavoritesListPermission,
+            $manageOwnShoppingCartPermission,
+            $manageOwnOrderPermission,
+        ]);
+
+        $dummyRole->syncPermissions([
+            $viewFavoritesListPermission,
+            $manageOwnShoppingCartPermission,
+            $manageOwnOrderPermission,
         ]);
     }
 }

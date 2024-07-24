@@ -68,7 +68,26 @@ class UpdateProductRequest extends FormRequest
             'sizes.*' =>  ['bail', 'sometimes', 'string', 'max:256'],
             'sizes_unit' =>  ['bail', 'sometimes', 'string', 'max:256'],
 
-            'sizes_data' => ['bail', 'sometimes', 'array', 'min:1', 'max:10'],
+            'sizes_data' => [
+                'bail', 
+                'sometimes', 
+                'array', 
+                'min:1', 
+                'max:10',
+                function ($attribute, $value, $fail) {
+                    $sizes = $this->request->all()['sizes'];
+                    if ($sizes) {
+                        $sizesArray = array_map(function($size){
+                            return $size['size'];
+                        },$value);
+                        
+                        if (!array_diff($sizesArray, $sizes) && count($sizes) >= count($sizesArray)){
+                            $fail('Main sizes in sizes_data should be the same as the sizes in sizes array.');
+                        }
+                    }
+                }
+            ],
+            
             'sizes_data.*.size' => ['bail', 'sometimes', 'string', 'max:256'],
             'sizes_data.*.unit' => ['bail', 'sometimes', 'string','max:256'],
 
@@ -79,7 +98,22 @@ class UpdateProductRequest extends FormRequest
             'thumbnail_data.color' => ['bail','sometimes','string','regex:/^#[a-fA-F0-9]{6}$/'],
             'thumbnail_data.image' => ['bail','sometimes','image','max:5000','mimes:jpg,png,jpeg'],
             
-            'images_data' => ['bail','sometimes'],
+            'images_data' => [
+                'bail',
+                'sometimes',
+                function ($attribute, $value, $fail) {
+                    $colors = $this->request->all()['colors'];
+                    if ($colors) {
+                        $colorsArray = array_map(function($imageData){
+                            return $imageData['color'];
+                        },$value);
+
+                        if (!array_diff($colorsArray, $colors) && count($colors) >= count($colorsArray)){
+                            $fail('Colors of images should be the same as the colors in the colors array.');
+                        }
+                    }
+                }
+            ],
             'images_data.*.images' => ['bail','sometimes','array'],
             'images_data.*.color' =>  ['bail','required_unless:images_data.*.images,null','string','regex:/^#[a-fA-F0-9]{6}$/'],
             'images_data.*.images.*' =>  ['bail','sometimes','image','max:5000','mimes:jpg,png,jpeg']

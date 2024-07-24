@@ -10,6 +10,7 @@ use App\Services\Product\Helpers\Filters\PriceFilter;
 use App\Services\Product\Helpers\Filters\SaleFilter;
 use App\Services\Product\Helpers\Filters\NewArrivalFilter;
 use App\Services\Product\Helpers\Filters\CategoryFilter;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Storage;
 
@@ -36,14 +37,45 @@ class UserService {
             ]);
 
             $new_user->assignRole($role);
-
             return ["user" => $new_user, "error" => null];
-
         }catch(Exception $e){
             return  ["user" => null, "error" => $e];;
         }
     }
 
+    public function createDummyUser(){
+        try{
+            $username =  $this->generateDummyUsername();
+            $email =  $this->generateDummyEmail($username);
+            $password = $this->generateDummyPassword();
 
+            $data = [
+                "email" => $email,
+                "username" => $username, 
+                "password" => $password,
+                'profile_picture' => null,
+            ];
+
+            $new_user = User::create($data);
+            return ["user" => $new_user, "error" => null];
+        }catch(Exception $e){
+            return  ["user" => null, "error" => $e];;
+        }
+    }
+
+    private function generateDummyUsername(){
+        do {
+            $username = "dummy_" . Carbon::now()->format('YmdHis') . '_' . rand(0, 100000000);
+        } while (User::where('username', $username)->exists());
+        return $username;
+    }
+
+    private function generateDummyEmail($username) {
+        return $username . '@dummymail.com';
+    }
+    
+    private function generateDummyPassword($length = 32) {
+        return bin2hex(random_bytes($length / 2));
+    }
 }
 

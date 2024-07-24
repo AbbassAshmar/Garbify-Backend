@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\CreateCategoryRequest;
 use App\Services\Category\CategoryService;
 use Illuminate\Http\Request;
 use App\Helpers\GetResponseHelper;
+
+use App\Http\Requests\CreateCategoryRequest;
+use App\Http\Requests\PatchCategoryRequest;
 
 class CategoryController extends Controller
 {
@@ -28,6 +30,23 @@ class CategoryController extends Controller
 
         $payload = GetResponseHelper::getSuccessResponse(['action' => 'created'],null);
         return response($payload, 201);
+    }
+
+    public function patchCategory(PatchCategoryRequest $request, $id){
+        $data = $request->validated();
+
+        $category = $this->categoryService->getCategoryByID($id);
+        ['category' => $category,'error' => $error] = $this->categoryService->updateCategory($category, $data);
+
+        if ($category == null && $error){
+            $error = ['message'=>$error, 'code'=>400];
+            $data = ['action' => "not updated"];
+            $response_body = GetResponseHelper::getFailedResponse($error,null, $data);
+            return response($response_body,400);
+        }
+
+        $payload = GetResponseHelper::getSuccessResponse(['action' => 'updated'],null);
+        return response($payload, 200);
     }
 
     public function getCategory(Request $request, $id){

@@ -75,7 +75,9 @@ Route::get("/categories/nested", [CategoryController::class, "listCategoriesNest
 Route::get("/categories/nested-depth-1",[CategoryController::class, "listCategoriesNested"]);
 Route::get("/categories/sales", [CategoryController::class, "listSalesCategories"]);
 Route::get("/categories/new-arrivals", [CategoryController::class, "listNewArrivalsCategories"]);
+Route::patch("/categories/{id}", [CategoryController::class, "patchCategory"]);
 Route::get("/categories/{id}", [CategoryController::class, "getCategory"]);
+
 // Stripe Controller Routes 
 
 Route::post('/checkout/products',[StripeController::class, "checkoutProducts"])->middleware(["auth:sanctum",'ability:'. TokenAbility::ACCESS_API->value]);
