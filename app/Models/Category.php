@@ -22,6 +22,9 @@ class Category extends Model
 
 
     // accessors 
+    function getImagePathAttribute(){
+        return $this->attributes['image_url'];
+    }
 
     function getImageUrlAttribute(){
         if (!isset($this->attributes['image_url']) || !$this->attributes['image_url']) 

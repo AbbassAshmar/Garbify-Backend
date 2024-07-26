@@ -23,9 +23,9 @@ class CreateProductRequest extends FormRequest
             'description' => ['bail', 'required','string','min:1', 'max:1000'],
             'type' => ['bail', 'required','string','min:1', 'max:256'],
             
-            'category_id' => ['bail','integer', 'required', 'exists:categories,id'],
+            'category_id' => ['bail', 'required', 'integer', 'exists:categories,id'],
             'quantity' =>  ['bail','required', 'integer', 'min:0'],
-            'status' => ['bail', 'required','string','min:1', 'max:256'],
+            'status_id' => ['bail', 'required','integer','exists:products_statuses,id'],
 
             'tags' => ['bail', 'min:3', 'array', 'required'],
             'tags.*' => ['bail','required', 'string', 'min:2', 'max:256'],
@@ -91,7 +91,7 @@ class CreateProductRequest extends FormRequest
                             return $size['size'];
                         },$value);
 
-                        if (!array_diff($sizesArray, $sizes) && count($sizes) >= count($sizesArray)){
+                        if (array_diff($sizesArray, $sizes) || count($sizes) < count($sizesArray)){
                             $fail('Main sizes in sizes_data should be the same as the sizes in sizes array.');
                         }
                     }
@@ -117,7 +117,7 @@ class CreateProductRequest extends FormRequest
                             return $imageData['color'];
                         },$value);
 
-                        if (!array_diff($colorsArray, $colors) && count($colors) >= count($colorsArray)){
+                        if (array_diff($colorsArray, $colors) || count($colors) < count($colorsArray)){
                             $fail('Colors of images should be the same as the colors in the colors array.');
                         }
                     }

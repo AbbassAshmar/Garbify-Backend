@@ -15,7 +15,7 @@ class CreateProductStatusSeeder extends Seeder
     {
         $statuses = [
             ['name' => 'out of stock', 'description' => "Product is set to out of stock, even if stock available"],
-            ['name' => 'out of stock', 'description' => "Product is set in stock, even if stock is unavailable"],
+            ['name' => 'in stock', 'description' => "Product is set in stock, even if stock is unavailable"],
         ];
 
         ProductStatus::insert($statuses);

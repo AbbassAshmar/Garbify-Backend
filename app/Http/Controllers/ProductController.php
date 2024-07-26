@@ -79,10 +79,10 @@ class ProductController extends Controller{
     
     public function createProduct(CreateProductRequest $request){
         $data = $request->validated();
-        $product = $this->productService->createProduct($data);
+        ["product"=> $product, "error"=>$error] = $this->productService->createProduct($data);
 
-        if ($product == null){
-            $error = ['message'=>'Something unexpected happened.', 'code'=>400];
+        if (!$product && $error){
+            $error = ['message'=>$error, 'code'=>400];
             $response_body = GetResponseHelper::getFailedResponse($error,null);
             return response($response_body,400);
         }

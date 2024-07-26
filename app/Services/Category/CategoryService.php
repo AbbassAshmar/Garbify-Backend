@@ -16,6 +16,37 @@ class CategoryService {
         return $category;
     }
 
+    private function storeCategoryImage($image, $oldImagePath=null, $id=null){
+        $imagesPath = config("images.category");
+        $imageUrl = null;
+
+        if ($image){
+            // eliminate duplicates by using content hash as a name
+            $hash = md5_file($image);
+            $name = $hash . "_image." . $image->extension();
+            
+            // if image is already stored, don't store it again
+            $isImageStored = Storage::exists($imagesPath . "/" . $name);
+            if (!$isImageStored){
+                $path = Storage::putFileAs($imagesPath, $image, $name);
+            }else{
+                $path =$imagesPath . "/" . $name;
+            }
+
+            $imageUrl = Storage::url($path);
+        }
+
+        // delete old image if not used by any other category
+        if ($oldImagePath && $oldImagePath != $imageUrl){
+            $isImageUsedByOtherCategories = Category::where([["image_url", $oldImagePath],["id", "!=" ,$id]])->exists();
+            if (!$isImageUsedByOtherCategories){
+                Storage::delete($imagesPath . "/" . array_slice(explode("/",$oldImagePath), -1)[0]);
+            }
+        }
+
+        return $imageUrl;
+    }
+
     public function createCategory($validatedData){
         $data = [
             'image_url' => null,
@@ -25,21 +56,14 @@ class CategoryService {
             'parent_id' => $validatedData['parent_id'] == -1 ? null :  $validatedData['parent_id'],
         ];
 
+        if (isset($validatedData["image"])){
+            $data['image_url'] = $this->storeCategoryImage($validatedData['image']);
+        }
+
         try {
             $category = Category::create($data);
         }catch(Exception $exc){
             return ["category" => null, "error" => $exc];
-        }
-
-        if (isset($validatedData["image"])){
-            $image = $validatedData['image'];
-            $name ="category_" . $category->id ."_image.".$image->extension();
-            
-            $path = Storage::putFileAs('public/categoryImages', $image, $name);
-            $imageUrl = Storage::url($path);
-
-            $category->image_url = $imageUrl;
-            $category->save();
         }
         
         return ["category" => $category, "error" => null];
@@ -58,13 +82,7 @@ class CategoryService {
         }
 
         if (isset($data["image"])){
-            $image = $data['image'];
-            $name ="category_" . $category->id ."_image.".$image->extension();
-            
-            $path = Storage::putFileAs('public/categoryImages', $image, $name);
-            $imageUrl = Storage::url($path);
-
-            $category->image_url = $imageUrl;
+            $category->image_url = $this->storeCategoryImage($data['image'],$category->image_url, $category->id);
         }
 
         $category->save();

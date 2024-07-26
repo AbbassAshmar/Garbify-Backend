@@ -62,35 +62,39 @@ class ProductService {
         return $products;
     }
 
-    private function setProductStatus($status, $product){
-        $status = ProductStatus::where(['name' => $status])->first();
-        if ($status->exists()){
-            $product->status_id = $status->id;
-        }
-    }
-
     private function setProductThumbnail($thumbnail_data, $product){
         $color = $thumbnail_data['color'];
         $image = $thumbnail_data['image'];
+        
         $color_instance = Color::firstOrCreate(['color'=>$color]);
+        $thumbnail_url = $this->storeProductImage($image);
 
-        $extension = $image->extension();
-        $path = 'public/productImages';
-        $name = 'product_'.$product->id.'thumbnail'.$extension;
-
-        $path = Storage::putFileAs($path, $image,$name);
-        $thumbnail_url = Storage::url($path); // stored at storage/public/ca.. , accessed by public/storage/ca..
-
-        if ($product->thumbnail->exists()){
-            $product->thumbnail->delete();
+        $hasThumbnail = $product->thumbnail->exists();
+        if (!$hasThumbnail){
+            ProductsImage::create([
+                'color_id'=>$color_instance->id, 
+                'image_url'=>$thumbnail_url,
+                'is_thumbnail' => true,
+                'product_id' => $product->id
+            ]);
+            return;
         }
 
-        ProductsImage::create([
-            'color_id'=>$color_instance->id, 
-            'image_url'=>$thumbnail_url,
-            'is_thumbnail' => true,
-            'product_id' => $product->id
-        ]);
+        $isThumbnailDifferent = $product->thumbnail->image_url != $thumbnail_url;
+        if ($isThumbnailDifferent){
+            $this->deleteProductImages(collect($product->thumbnail));
+            ProductsImage::create([
+                'color_id'=>$color_instance->id, 
+                'image_url'=>$thumbnail_url,
+                'is_thumbnail' => true,
+                'product_id' => $product->id
+            ]);
+        }else{
+            if ($product->thumbnail->color_id != $color_instance->id){
+                $product->thumbnail->color_id = $color_instance->id;
+                $product->thumbnail->save();
+            }
+        }
     }
 
     function setProductTags($tags,$product){
@@ -222,23 +226,46 @@ class ProductService {
         return $sizes_data;
     }
 
+    function storeProductImage($image){
+        $imagesPath = config("images.product");
+
+        // hash content of the image, use the hash as a name for uniqueness.
+        $hashImageContent = md5_file($image);
+        $name = $hashImageContent . "_image.". $image->extension();
+        
+        $isImageStored = Storage::exists($imagesPath . $name);
+        if (!$isImageStored){
+            $path = Storage::putFileAs($imagesPath, $image, $name);
+        }else{
+            $path = $imagesPath . "/" . $name;
+        }
+
+        return Storage::url($path);
+    }
+
+    // takes a list of ProductImages and deletes them, 
+    // if an image is not used by other ProductImages, it also deletes it
+    function deleteProductImages($images){
+        $imagesPath = config("images.product");
+
+        foreach($images as $image){
+            $usedByOthers = ProductsImage::where([["image_url", $image->image_url],["id", "!=", $image->id]])->exists();
+            if (!$usedByOthers){
+                $imageName = array_slice(explode("/",$image->image_url), -1)[0];
+                Storage::delete($imagesPath . "/" . $imageName);
+            }
+        }
+
+        $images->delete();
+    }
+
     function setProductImages($imagesColorsList, $product){
         $productImages = [];
+
         foreach($imagesColorsList as $images_data) {
             $color = Color::firstOrCreate(['color'=>$images_data['color']]);
             foreach($images_data['images'] as $image){
-                // hash content of the image, use the hash as a name for uniqueness.
-                $hashImageContent = md5_file($image);
-                $name = $hashImageContent . "_image.". $image->extension();
-                
-                $isImageStored = Storage::exists('public/productImages/' . $name);
-                if (!$isImageStored){
-                    $path = Storage::putFileAs('public/productImages', $image, $name);
-                }else{
-                    $path = Storage::path($name);
-                }
-
-                $imageUrl = Storage::url($path); // stored at storage/public/ca.. , accessed by public/storage/ca..
+                $imageUrl = $this->storeProductImage($image);
                 array_push($productImages, $imageUrl);
 
                 // check if the image already belongs to the product
@@ -259,8 +286,10 @@ class ProductService {
             }
         }
 
-        // delete product_images not present in the list
-        $product->cover_images()->whereNotIn(["image_url", $productImages])->delete();
+        // delete useless product_images instances not present in the list
+        // if an image is not used by other products, delete it from storage
+        $removedImages = $product->cover_images()->whereNotIn(["image_url", $productImages])->get();
+        $this->deleteProductImages($removedImages);
     }
 
     // if a size is related to an alternative and no common product between them, end their relation
@@ -281,6 +310,7 @@ class ProductService {
             'name'=> $validated_data['name'],
             'quantity' => $validated_data['quantity'],
             'category_id'=> $validated_data['category_id'],
+            'status_id' => $validated_data['status_id'],
             'description' =>$validated_data['description'],
             'type' => $validated_data['type'],
             'original_price' => $validated_data['original_price'],
@@ -289,19 +319,15 @@ class ProductService {
 
         try {
             $product_instance = Product::create($data);
-        }catch(Exception $e){
-            return null;
+        }catch(Exception $exc){
+            return ["product" => null, "error" => $exc];
         }
 
         // create the thumbnail instance 
         if(isset($validated_data['thumbnail_data'])){
             $this->setProductThumbnail($validated_data['thumbnail_data'], $product_instance);
         }
-        
-        if (isset($data['status'])){
-            $this->setProductStatus($data['status'], $product_instance);
-        }
-
+    
         // create other images instances
         if (isset($validated_data['images_data'])){
             $this->setProductImages($validated_data['images_data'],$product_instance);
@@ -328,13 +354,13 @@ class ProductService {
             $this->setCurrentSale($validated_data['sale'], $product_instance);
         }
 
-        return $product_instance;
+        return ["product" => $product_instance, "error" => null];
     }
 
     public function updateProduct($product, $data){
         $directUpdateFields = [
-            "name", "description", "quantity",  
-            "original_price", "selling_price","type"
+            "name", "description", "quantity",'category_id',
+            "original_price", "selling_price","type",'status_id'
         ];
 
         foreach($directUpdateFields as $field){
@@ -349,10 +375,6 @@ class ProductService {
 
         if (isset($data["colors"])){
             $this->setProductColors($data['colors'], $product);
-        }
-
-        if (isset($data['status'])){
-            $this->setProductStatus($data['status'], $product);
         }
 
         if (isset($data['sizes_data'])){
