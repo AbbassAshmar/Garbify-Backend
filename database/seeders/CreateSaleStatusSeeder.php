@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\SaleStatus;
+use App\Models\SalesStatus;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -18,6 +18,6 @@ class CreateSaleStatusSeeder extends Seeder
             ['name' => 'inactive', 'description' => "Inactive sale will not be applied even if it's time has started."],
         ];
 
-        SaleStatus::insert($statuses);
+        SalesStatus::insert($statuses);
     }
 }

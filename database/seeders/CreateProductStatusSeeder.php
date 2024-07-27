@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\ProductStatus;
+use App\Models\ProductsStatus;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -18,6 +18,6 @@ class CreateProductStatusSeeder extends Seeder
             ['name' => 'in stock', 'description' => "Product is set in stock, even if stock is unavailable"],
         ];
 
-        ProductStatus::insert($statuses);
+        ProductsStatus::insert($statuses);
     }
 }

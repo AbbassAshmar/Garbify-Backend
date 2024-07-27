@@ -12,10 +12,10 @@ class Sale extends Model
     
     protected $appends = ['status'];
     protected $hidden = ["created_at", "updated_at","id",'product_id'];
-    protected $fillable = ['product_id' , 'starts_at','status', 'ends_at' , 'sale_percentage','quantity'];
+    protected $fillable = ['product_id' , 'starts_at','status_id', 'ends_at' , 'sale_percentage','quantity'];
 
     public function saleStatus(){
-        return $this->belongsTo(SaleStatus::class);
+        return $this->belongsTo(SalesStatus::class);
     }
 
     public function product(){

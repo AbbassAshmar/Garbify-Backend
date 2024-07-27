@@ -134,4 +134,10 @@ class ProductController extends Controller{
         $response = GetResponseHelper::getSuccessResponse(['sizes'=>$product->colors_array],null);
         return response($response,200);
     }
+
+    public function listProductsStatuses(Request $request){
+        $statuses = $this->productService->getStatuses();
+        $response = GetResponseHelper::getSuccessResponse(['statuses'=>$statuses],null);
+        return response($response, 200);
+    }
 }

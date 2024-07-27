@@ -34,7 +34,7 @@ class Product extends Model
     ];
 
     public function productStatus(){
-        return $this->belongsTo(ProductStatus::class);
+        return $this->belongsTo(ProductsStatus::class);
     }
 
     public function category(){

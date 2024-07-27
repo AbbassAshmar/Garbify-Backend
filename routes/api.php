@@ -57,10 +57,11 @@ Route::post("/users/clients", [UserController::class,'createClient'])->middlewar
 // Products Controller Routes 
 Route::get("/products", [ProductController::class, "listProducts"]);
 Route::get("/products/popular", [ProductController::class, "listPopularProducts"]);
-Route::get("/products/{id}", [ProductController::class, "retrieveProduct"]);
 Route::get("/products/{id}/colors", [ProductController::class, "productColor"]);
 Route::get("/products/{id}/sizes", [ProductController::class, "productSize"]);
 Route::post("/products", [ProductController::class , "createProduct"]);
+Route::get("/products/statuses", [ProductController::class, "listProductsStatuses"]);
+Route::get("/products/{id}", [ProductController::class, "retrieveProduct"]);
 Route::delete("/products/{id}", [ProductController::class, "deleteProduct"]);
 
 // Filter Controller Routes

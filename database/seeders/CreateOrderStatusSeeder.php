@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\OrderStatus;
+use App\Models\OrdersStatus;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -23,6 +23,6 @@ class CreateOrderStatusSeeder extends Seeder
             ["canceled" => "on hold", "description" => "Before shipping status, customer can cancel order and get his money back"],
         ];
 
-        OrderStatus::insert($statuses);
+        OrdersStatus::insert($statuses);
     }
 }

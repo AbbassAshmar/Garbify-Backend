@@ -13,7 +13,6 @@ class CreateCategoryRequest extends FormRequest
      */
     public function rules(): array
     {
-
         $rules = [
             "parent_id" => ["bail", "required","min:-1",'integer' ],
             "name" => ['bail','required', "string","min:1", "max:500"],

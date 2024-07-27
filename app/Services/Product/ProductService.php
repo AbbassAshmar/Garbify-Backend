@@ -17,12 +17,14 @@ use App\Helpers\GetResponseHelper;
 use App\Models\AlternativeSize;
 use App\Models\Color;
 use App\Models\ProductsImage;
-use App\Models\ProductStatus;
+use App\Models\ProductsStatus;
 use App\Models\Sale;
+use App\Models\SalesStatus;
 use App\Models\Size;
 use App\Models\Tag;
 use App\Services\Product\Helpers\Filters\SearchFilter;
 use Exception;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -69,7 +71,7 @@ class ProductService {
         $color_instance = Color::firstOrCreate(['color'=>$color]);
         $thumbnail_url = $this->storeProductImage($image);
 
-        $hasThumbnail = $product->thumbnail->exists();
+        $hasThumbnail = $product->thumbnail;
         if (!$hasThumbnail){
             ProductsImage::create([
                 'color_id'=>$color_instance->id, 
@@ -150,7 +152,7 @@ class ProductService {
             "ends_at" => $saleData["sale_end_date"] ?? null,
             "quantity" => $saleData["sale_quantity"] ?? null,
             "sale_percentage" => $saleData["discount_percentage"],
-            "status" => "active",
+            "status_id" => SalesStatus::where('name', 'active')->first()->id,
         ];
 
         Sale::create($newSale);
@@ -181,7 +183,7 @@ class ProductService {
                     array_push($alternativeSizesIDs, $alternativeSize->id);
                     array_push($allAlternativeSizesIDs, $alternativeSize->id);
                 }
-                $size_instance->alternativeSizes()->attch($alternativeSizesIDs);          
+                $size_instance->alternativeSizes()->attach($alternativeSizesIDs);          
             }
         }
 
@@ -247,7 +249,7 @@ class ProductService {
     // if an image is not used by other ProductImages, it also deletes it
     function deleteProductImages($images){
         $imagesPath = config("images.product");
-
+        
         foreach($images as $image){
             $usedByOthers = ProductsImage::where([["image_url", $image->image_url],["id", "!=", $image->id]])->exists();
             if (!$usedByOthers){
@@ -256,7 +258,9 @@ class ProductService {
             }
         }
 
-        $images->delete();
+        if (!$images->isEmpty()){
+            $images->delete();
+        }
     }
 
     function setProductImages($imagesColorsList, $product){
@@ -269,8 +273,8 @@ class ProductService {
                 array_push($productImages, $imageUrl);
 
                 // check if the image already belongs to the product
-                $currentImage = $product->cover_images()->where([['image_url', $imageUrl]])->get();
-                if ($currentImage->exists()){
+                $currentImage = $product->images()->where([["is_thumbnail",false],['image_url', $imageUrl]])->first();
+                if ($currentImage){
                     if ($currentImage->color_id != $color->id){
                         $currentImage->color_id = $color->id;
                         $currentImage->save();
@@ -279,7 +283,7 @@ class ProductService {
                     ProductsImage::create([
                         'color_id'=>$color->id, 
                         'image_url'=>$imageUrl,
-                        'is_thumbnail' => false,
+                        'is_thumbnail'=> false,
                         'product_id' => $product->id
                     ]);
                 }
@@ -288,7 +292,7 @@ class ProductService {
 
         // delete useless product_images instances not present in the list
         // if an image is not used by other products, delete it from storage
-        $removedImages = $product->cover_images()->whereNotIn(["image_url", $productImages])->get();
+        $removedImages = $product->images()->where([['is_thumbnail',false]])->whereNotIn("image_url", $productImages)->get();
         $this->deleteProductImages($removedImages);
     }
 
@@ -317,44 +321,47 @@ class ProductService {
             'selling_price' => $validated_data['selling_price'],
         ];
 
+        DB::beginTransaction();
         try {
             $product_instance = Product::create($data);
+
+            // create the thumbnail instance 
+            if(isset($validated_data['thumbnail_data'])){
+                $this->setProductThumbnail($validated_data['thumbnail_data'], $product_instance);
+            }
+        
+            // create other images instances
+            if (isset($validated_data['images_data'])){
+                $this->setProductImages($validated_data['images_data'],$product_instance);
+            }
+
+            // get or create tags instances
+            if (isset($validated_data['tags'])){
+                $this->setProductTags($validated_data['tags'],$product_instance);
+            }
+
+            // get or create colors instances 
+            if (isset($validated_data['colors'])){
+                $this->setProductColors($validated_data['colors'],$product_instance);
+            }   
+
+            // get or create sizes and alternative sizes for each size 
+            if (isset($validated_data['sizes_data'])) {
+                $this->validateAlternativeSizes($validated_data['sizes_data']);
+                $this->setProductSizes($validated_data['sizes_data'], $product_instance);
+            }
+
+            // create sale instance 
+            if (isset($validated_data["sale"]) && $validated_data["sale"]){
+                $this->setCurrentSale($validated_data, $product_instance);
+            }
+
+            DB::commit();
+            return ["product" => $product_instance, "error" => null];
         }catch(Exception $exc){
+            DB::rollBack();
             return ["product" => null, "error" => $exc];
         }
-
-        // create the thumbnail instance 
-        if(isset($validated_data['thumbnail_data'])){
-            $this->setProductThumbnail($validated_data['thumbnail_data'], $product_instance);
-        }
-    
-        // create other images instances
-        if (isset($validated_data['images_data'])){
-            $this->setProductImages($validated_data['images_data'],$product_instance);
-        }
-
-        // get or create tags instances
-        if (isset($validated_data['tags'])){
-            $this->setProductTags($validated_data['tags'],$product_instance);
-        }
-
-        // get or create colors instances 
-        if (isset($validated_data['colors'])){
-            $this->setProductColors($validated_data['colors'],$product_instance);
-        }   
-
-        // get or create sizes and alternative sizes for each size 
-        if (isset($validated_data['sizes_data'])) {
-            $this->validateAlternativeSizes($validated_data['sizes_data']);
-            $this->setProductSizes($validated_data['sizes_data'], $product_instance);
-        }
-
-        // create sale instance 
-        if (isset($validated_data["sale"]) && $validated_data["sale"]){
-            $this->setCurrentSale($validated_data['sale'], $product_instance);
-        }
-
-        return ["product" => $product_instance, "error" => null];
     }
 
     public function updateProduct($product, $data){
@@ -363,70 +370,85 @@ class ProductService {
             "original_price", "selling_price","type",'status_id'
         ];
 
-        foreach($directUpdateFields as $field){
-            if (isset($data[$field])){
-                $product[$field] = $data[$field];
-            }
-        }
-
-        if (isset($data["tags"])){
-            $this->setProductTags($data['tags'], $product);
-        }
-
-        if (isset($data["colors"])){
-            $this->setProductColors($data['colors'], $product);
-        }
-
-        if (isset($data['sizes_data'])){
-            $oldSizes = $product->sizes;
-
-            if (!$data['sizes']){
-                $sizes = $product->sizes->pluck("size")->toArray();
-                $sizesInSizesData = array_map(function($size){
-                    return $size['size'];
-                },$data['sizes_data']);
-
-                if ($sizes != $sizesInSizesData){
-                    throw ValidationException::withMessages([
-                        'sizes_data' => 'Main sizes in sizes data should be the same as the sizes of the product.',
-                    ]);
+        DB::beginTransaction();
+        try {
+            foreach($directUpdateFields as $field){
+                if (isset($data[$field])){
+                    $product[$field] = $data[$field];
                 }
             }
 
-            $this->validateAlternativeSizes($data['sizes_data']);
-            $this->setProductSizes($data['sizes_data'], $product);
-            $this->clearSizesAndAlternativesRelations($oldSizes);
-        }
-
-        if(isset($data['thumbnail_data'])){
-            $this->setProductThumbnail($data['thumbnail_data'], $product);
-        }   
-
-        if (isset($data['images_data'])){
-            if (!$data['colors']){
-                $colors = $product->colors->pluck("color")->toArray();
-                $colorsInImagesData = array_map(function($imageData){
-                    return $imageData['color'];
-                },$data['images_data']);
-
-                if ($colors != $colorsInImagesData){
-                    throw ValidationException::withMessages([
-                        'images_data' => 'Colors of images should be the same as colors of the product.',
-                    ]);
-                }
+            if (isset($data["tags"])){
+                $this->setProductTags($data['tags'], $product);
             }
 
-            $this->setProductImages($data['images_data'],$product);
-        }
-        
-        $this->updateCurrentSale($data, $product);
+            if (isset($data["colors"])){
+                $this->setProductColors($data['colors'], $product);
+            }
 
-        $save = $product->save();
-        return $save ? $product : null;
+            if (isset($data['sizes_data'])){
+                $oldSizes = $product->sizes;
+
+                if (!$data['sizes']){
+                    $sizes = $product->sizes->pluck("size")->toArray();
+                    $sizesInSizesData = array_map(function($size){
+                        return $size['size'];
+                    },$data['sizes_data']);
+
+                    if ($sizes != $sizesInSizesData){
+                        throw ValidationException::withMessages([
+                            'sizes_data' => 'Main sizes in sizes data should be the same as the sizes of the product.',
+                        ]);
+                    }
+                }
+
+                $this->validateAlternativeSizes($data['sizes_data']);
+                $this->setProductSizes($data['sizes_data'], $product);
+                $this->clearSizesAndAlternativesRelations($oldSizes);
+            }
+
+            if(isset($data['thumbnail_data'])){
+                $this->setProductThumbnail($data['thumbnail_data'], $product);
+            }   
+
+            if (isset($data['images_data'])){
+                if (!$data['colors']){
+                    $colors = $product->colors->pluck("color")->toArray();
+                    $colorsInImagesData = array_map(function($imageData){
+                        return $imageData['color'];
+                    },$data['images_data']);
+
+                    if ($colors != $colorsInImagesData){
+                        throw ValidationException::withMessages([
+                            'images_data' => 'Colors of images should be the same as colors of the product.',
+                        ]);
+                    }
+                }
+
+                $this->setProductImages($data['images_data'],$product);
+            }
+            
+            $this->updateCurrentSale($data, $product);
+
+            $save = $product->save();
+            if ($save){
+                DB::commit();
+                return ["product"=> $product->fresh(), "error"=>null];
+            }else{
+                throw new Exception("Update Failed. Something unexpected happened");
+            }
+        }catch(Exception $exc){
+            DB::rollBack();
+            return ["product"=> null, "error"=>$exc];
+        }
     }
 
     public function deleteProduct($product){
         return $product->delete();
+    }
+
+    public function getStatuses(){
+        return ProductsStatus::with([])->get();
     }
 }
 
